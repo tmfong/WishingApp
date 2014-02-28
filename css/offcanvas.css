@@ -1,0 +1,180 @@
+/*
+ * Style tweaks
+ * --------------------------------------------------
+ */
+html,
+body {
+  overflow-x: hidden; /* Prevent scroll on narrow devices */
+  background-color: #fcfcfc;  
+}
+body {
+  padding-top: 0px;
+}
+footer {
+  padding: 30px 0;
+}
+
+h1,
+.h1 {
+  font-size: 18px;
+  margin-bottom: 0;
+  padding-bottom: 0;
+  color: #5cb85c;  
+  margin-top: 10px;
+}
+h2,
+.h2 {
+  font-size: 16px;
+  font-weight: normal;
+  margin-top: 10px;
+  margin-bottom: 0px;
+  color: #ccc;  
+}
+h3,
+.h3 {
+  font-size: 16px;
+}
+h4,
+.h4 {
+  font-size: 14px;
+}
+h5,
+.h5 {
+  font-size: 12px;
+}
+blockquote {
+  font-size: 14px;
+  color: #666;
+}
+.row {
+  margin-left: -20px;
+  margin-right: -20px
+}
+.container {
+  width: 100%
+}
+.container > .navbar-header {
+  text-align: center;
+}
+.navbar {
+  min-height: 35px;
+  background-color: #5cb85c;
+  margin-bottom: 0px;
+}
+.navbar-default .navbar-brand {
+    color: #fff;
+}
+.navbar-form {
+  width: auto;
+  padding: 0px;
+  margin-right: -10px;
+  margin-left: 0px;
+  border: 0px none;
+}
+.navbar-brand {
+  height: auto;
+  float: none;    
+  padding: 10px 15px 10px 15px;
+  line-height: 35px;
+}
+
+.title {
+  /*border-bottom: 1px solid #5cb85c;*/
+  background-color: #ecf9ee;  
+}
+.title-right {
+  text-align: right;
+  white-space: nowrap;
+}
+strong {
+  font-weight: normal;
+  background-color: #fff3ad;
+}
+
+.md > h1 {
+  font-size: 14px;  
+  color: #5bbfde; 
+  font-weight: bold;    
+  text-decoration: underline;
+}
+.md > h2 {
+  border-bottom: 0px none;  
+  font-size: 14px;
+  font-weight: bold;    
+  color: #5bbfde;   
+}
+.md > h3 {
+  font-size: 12px;
+  color: #5bbfde;   
+}
+.md > h4 {
+  font-size: 11px;  
+  color: #5bbfde;    
+}
+.md > h5 {
+  font-size: 10px;   
+  color: #5bbfde;    
+}
+.md {
+  margin: 0px -10px 5px -10px;
+  padding: 10px;
+  background-color: #fff;
+  border: 1px solid #f9f9f9;
+  border-radius: 4px;
+}
+
+@media screen and (min-width: 768px) {
+  .container {
+    width: 98%
+  }   
+  .navbar-brand {
+    float: none;    
+  }
+  .navbar-header {
+    float: none;
+  }
+}
+/*
+ * Off Canvas
+ * --------------------------------------------------
+ */
+@media screen and (max-width: 767px) {
+  .row-offcanvas {
+    position: relative;
+    -webkit-transition: all .25s ease-out;
+       -moz-transition: all .25s ease-out;
+            transition: all .25s ease-out;
+  }
+
+  .row-offcanvas-right {
+    right: 0;
+  }
+
+  .row-offcanvas-left {
+    left: 0;
+  }
+
+  .row-offcanvas-right
+  .sidebar-offcanvas {
+    right: -50%; /* 6 columns */
+  }
+
+  .row-offcanvas-left
+  .sidebar-offcanvas {
+    left: -50%; /* 6 columns */
+  }
+
+  .row-offcanvas-right.active {
+    right: 50%; /* 6 columns */
+  }
+
+  .row-offcanvas-left.active {
+    left: 50%; /* 6 columns */
+  }
+
+  .sidebar-offcanvas {
+    position: absolute;
+    top: 0;
+    width: 50%; /* 6 columns */
+  }
+}
