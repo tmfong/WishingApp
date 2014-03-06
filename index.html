@@ -27,24 +27,43 @@
 </head>
 <body>
   <script type="text/x-handlebars">
+    <div class="navbar" role="navigation">
+      <div class="row">
 
-    <button type="button" class="btn btn-success" {{action 'addingRecord'}}>
-      <span class="glyphicon glyphicon-plus">New</span>
-    </button>  
-      
-    <br><br>
+        <div class="col-xs-2">
+        </div>      
 
-    {{outlet}}
+        <div class="col-xs-8 text-center">
+          <a class="navbar-brand" href="http://getbootstrap.com/examples/offcanvas/#">WishingApp</a>
+        </div>
 
+        <div class="col-xs-2">
+          {{#unless isAddingRecord}}    
+            <button type="button" class="btn btn-success pull-right" {{action 'addingRecord'}}>
+              <span class="glyphicon glyphicon-plus" ></span>
+            </button> 
+          {{/unless}}
+        </div>
+
+      </div><!-- /.container -->
+    </div><!-- /.navbar -->
+
+    <div class="container-fluid">
+      <div class="row row-offcanvas row-offcanvas-left" >    
+        <div class="col-xs-12 col-sm-12">        
+          {{outlet}}
+        </div><!--/span-->
+      </div><!--/row-->          
+    </div><!--/.container-->
   </script>
 
   <script type="text/x-handlebars" data-template-name="days">
     {{#if isAddingRecord}}    
-      {{day-record isEditing=true isNewRecord=true updateAction='save' record=currentDay}}
+      {{day-record isEditing=true isAddingRecord=true updateAction='save' cancelAction='cancel' deleteAction='delete' record=currentDay}}
     {{/if}}
 
     {{#each}}
-      {{day-record isEditing=false updateAction='update' record=this}}
+      {{day-record isEditing=false updateAction='update' deleteAction='delete' record=this}}
     {{/each}}
   </script>
 
@@ -54,39 +73,181 @@
   <script type="text/x-handlebars" data-template-name="components/day-record">
     {{#if isEditing}} 
 
-      <button type="button" class="btn btn-primary" {{action 'update'}}>
-        <span class="glyphicon glyphicon-ok">Ok</span>
-      </button> 
+      <div class="row title"> <!-- title row-->
+          <div class="col-xs-4">
+            <h1>         
+              {{record.dayOfWeek}}
+            </h1>
+          </div>
+          <div class="col-xs-8">
+            <h1 class="title-right">
+              {{record.dateDisplay}}
+            </h1>
+          </div>
+      </div> <!--/row-->
 
-      {{input placeholder="YYYY-MM-DD" value=record.date class="form-control" size="10" maxlength="10"}}   
-      {{textarea placeholder="I wish..." rows="10" value=record.a class="form-control"}}
+      <div class="well well-sm">
+        <div class="row"> <!-- date row -->
+          <div class="col-xs-12">
+            {{input placeholder="Year-month-day" value=record.dateString class="form-control"}}   
+          </div>
+        </div> <!--/row-->
 
-      <br><br>
+        <div class="row"> <!-- content row --> 
+          <div class="col-xs-12 col-sm-6">
+            <h2>Wishes</h2>
+            {{textarea placeholder="I will..." rows="10" value=record.a class="form-control"}}
+          </div>
+          <div class="col-xs-12 col-sm-6">
+            <h2>Actions</h2>
+            {{textarea placeholder="I did..." rows="10" value=record.c class="form-control"}}
+          </div>      
+          <div class="col-xs-12">
+            <h2>Notes</h2>
+            {{textarea placeholder="The meaning of the universe is...42" rows="10" value=record.b class="form-control"}}
+          </div>
+        </div> <!--/row--> 
+
+        <div class="row"> <!-- buttons row -->
+          <div class="col-xs-12">
+            {{action-buttons isAddingRecord=isAddingRecord updateAction='update' cancelAction='cancel' deleteAction='delete' }}          
+          </div>
+        </div> <!--/row-->        
+      </div> <!--/well-->
 
     {{else}}
 
-      {{record.dateDisplay}}
-
-      <button type="button" class="btn btn-default" {{action 'editing'}}>
-        <span class="glyphicon glyphicon-pencil">Edit</span>
-      </button> 
-
-      <div class="md">
-        {{format-markdown record.a}}
+      <div class="row title">
+          <div class="col-xs-4">
+            <h1>
+              {{record.dayOfWeek}}
+            </h1>
+          </div>
+          <div class="col-xs-8">
+            <h1 class="title-right">
+              {{record.dateDisplay}}
+              <button type="button" class="btn btn-default btn-xs" {{action 'editing'}}>
+                <span class="glyphicon glyphicon-pencil" ></span>
+              </button> 
+            </h1>
+          </div>
       </div>
+      <div class="row">
+        <div class="col-xs-12 col-sm-6">
+          {{#if record.a}}
+            <h2>Wishes</h2>
+            <div class="md">
+              {{format-markdown record.a}}
+            </div>
+          {{/if}}
+        </div>
+        <div class="col-xs-12 col-sm-6">
+          {{#if record.c}}        
+            <h2>Actions</h2>
+            <div class="md">            
+              {{format-markdown record.c}}
+            </div>
+          {{/if}}
+        </div>   
+
+        <div class="col-xs-12">
+          {{#if record.b}}    
+            <h2>Notes</h2>            
+            <div class="md">
+              {{format-markdown record.b}}
+            </div>
+          {{/if}}
+        </div>                             
+      </div><!--/row--> 
+
     {{/if}}      
+  </script>
+
+
+
+  <!--    Component: Day Record    -->
+
+  <script type="text/x-handlebars" data-template-name="components/action-buttons">
+    <div class="h3 pull-right">  
+      {{#if isAddingRecord}}
+
+        <button type="button" class="btn btn-warning" {{action 'cancelEdit'}}>
+          <span class="glyphicon glyphicon-ban-circle" ></span>
+        </button>  &nbsp;
+
+        <button type="button" class="btn btn-primary" {{action 'updateEdit'}}>
+          <span class="glyphicon glyphicon-ok" ></span>
+        </button> 
+
+      {{else}}
+
+        {{#if isConfirmingDelete}}   
+
+            Delete This Entry? 
+            <br />
+            
+            <button type="button" class="btn btn-primary" {{action 'cancelDelete'}}>
+              <span class="glyphicon glyphicon-ban-circle"> Nevermind</span> 
+            </button> 
+
+            <button type="button" class="btn btn-danger" {{action 'delete'}}>
+              <span class="glyphicon glyphicon-ok"> Delete</span> 
+            </button> 
+
+ 
+          </div>
+
+        {{else}}
+
+          {{#if isConfirmingCancel}}   
+
+              Abandon Your Changes? 
+              <br />
+              
+              <button type="button" class="btn btn-primary" {{action 'cancelCancel'}}>
+                <span class="glyphicon glyphicon-ban-circle"> Nevermind</span> 
+              </button> 
+
+              <button type="button" class="btn btn-danger" {{action 'cancelEdit'}}>
+                <span class="glyphicon glyphicon-ok"> Yes</span> 
+              </button> 
+            </div>
+
+          {{else}}
+
+            <button type="button" class="btn btn-danger" {{action 'confirmingDelete'}}>
+              <span class="glyphicon glyphicon-remove" ></span> 
+            </button> &nbsp;
+            
+            <button type="button" class="btn btn-warning" {{action 'confirmingCancel'}}>
+              <span class="glyphicon glyphicon-ban-circle" ></span>
+            </button> &nbsp;
+            
+            <button type="button" class="btn btn-primary" {{action 'updateEdit'}}>
+              <span class="glyphicon glyphicon-ok" ></span>
+            </button>  
+
+          {{/if}} {{!-- if isConfirmingCancel --}}
+
+        {{/if}} {{!-- if isConfirmingDelete --}}
+
+      {{/if}} {{!-- if isAddingRecord --}}
+    </div>
   </script>
 
 
   <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
   <script src="//cdnjs.cloudflare.com/ajax/libs/handlebars.js/1.1.2/handlebars.min.js"></script>
-  <script src="//cdnjs.cloudflare.com/ajax/libs/ember.js/1.3.0-beta.4/ember.min.js"></script>
-  <script src="//cdnjs.cloudflare.com/ajax/libs/ember-data.js/1.0.0-beta.4/ember-data.min.js"></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/ember.js/1.3.0-beta.4/ember.js"></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/ember-data.js/1.0.0-beta.4/ember-data.js"></script>
   <script src="//cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.1.1/js/bootstrap.min.js"></script>
   <script src="//cdnjs.cloudflare.com/ajax/libs/showdown/0.3.1/showdown.min.js"></script>
   <script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.1.0/moment.min.js"></script>   
   <script src="//www.dropbox.com/static/api/dropbox-datastores-1.0-latest.js"></script>
   <script src="js/ember-dropbox-datastore-adapter.js"></script>
-  <script src="js/demo.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/routers.js"></script>
+  <script src="js/controllers.js"></script>
+  <script src="js/models.js"></script>
 </body>
 </html>

@@ -29,10 +29,10 @@ App.DaysRoute = Ember.Route.extend({
       this.get('controller').set('currentDay', day);
       this.controllerFor("application").set('isAddingRecord', true);
     },    
-    cancelAddingRecord: function() {
+    cancel: function() {
       console.log('>> DaysRoute cancelAdding');            
       this.controllerFor("application").set('isAddingRecord', false);
-    },    
+    },   
     save: function(obj) {
       /* ERROR: Must use Ember.set() to access this property
       obj.date = day;
@@ -86,11 +86,10 @@ App.DayRecordComponent = Ember.Component.extend({
       this.toggleProperty('isEditing'); 
     },
     cancel: function() {
-      console.log('>> DayRecordComponent cancel cancelAction=', this.get('cancelAction'))
+      this.toggleProperty('isEditing');  
+      // Bubble up?
       if (this.get('cancelAction')) {
-        this.sendAction('cancelAction');
-      } else {
-        this.toggleProperty('isEditing');        
+        this.sendAction('cancelAction');     
       } 
     },   
     delete: function() { 
@@ -107,9 +106,18 @@ App.ActionButtonsComponent = Ember.Component.extend({
     updateEdit: function() {
       this.sendAction('updateAction');
     },
-    cancelEdit: function() {
+
+    confirmingCancel: function() {
+      this.toggleProperty('isConfirmingCancel'); 
+    },
+    cancelEdit: function() {      
       this.sendAction('cancelAction');
-    },       
+      this.toggleProperty('isConfirmingCancel');       
+    },  
+    cancelCancel: function() {
+      this.toggleProperty('isConfirmingCancel'); 
+    },    
+
     confirmingDelete: function() {
       this.toggleProperty('isConfirmingDelete'); 
     },
