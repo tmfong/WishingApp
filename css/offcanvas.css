@@ -5,7 +5,7 @@
 html,
 body {
   overflow-x: hidden; /* Prevent scroll on narrow devices */
-  background-color: #fcfcfc;  
+  background-color:  #fff; /* light blue #bce8f1;  ex light blue #f4f8fa; */
 }
 body {
   padding-top: 0px;
@@ -14,21 +14,56 @@ footer {
   padding: 30px 0;
 }
 
+.container {
+  width: 100%
+}
+.container > .navbar-header {
+  text-align: center;
+}
+
+.navbar {
+  min-height: 44px;
+  background-color: #f4f8fa; /* blue #5bbfde; green #5cb85c */
+  margin-bottom: 0px;
+  font-size: 20px;
+  font-weight: bold;
+  color: #5bbfde;
+  padding-top: 5px;
+  padding-bottom: 0px;
+}
+.navbar-default .navbar-brand {
+    color: #fff;
+}
+.navbar-form {
+  width: auto;
+  padding: 0px;
+  margin-right: -10px;
+  margin-left: 0px;
+  border: 0px none;
+}
+.navbar-brand {
+  height: auto;
+  float: none;    
+  padding: 10px 15px 10px 15px;
+  line-height: 35px;
+  color: #fff;
+}
+
 h1,
 .h1 {
   font-size: 18px;
-  margin-bottom: 0;
+  margin-bottom: -5px;
   padding-bottom: 0;
-  color: #5cb85c;  
+  color: #fff; /* green #5cb85c; blue#5bbfde */ 
   margin-top: 10px;
+  min-height: 30px; /* day-title-right has a 30px icon */
 }
 h2,
 .h2 {
-  font-size: 14px;
-  font-weight: normal;
+  font-size: 16px;
   margin-top: 10px;
   margin-bottom: 0px;
-  color: #ccc;  
+  color: #5bbfde; /*dark blue #5bbfde;  light green #c2f2c2 light blue #5bbfde; */
 }
 
 h3,
@@ -53,40 +88,25 @@ blockquote {
   margin-left: -20px;
   margin-right: -20px
 }
-.container {
-  width: 100%
-}
-.container > .navbar-header {
-  text-align: center;
-}
-.navbar {
-  min-height: 35px;
-  background-color: #5cb85c;
+
+.well {
   margin-bottom: 0px;
-}
-.navbar-default .navbar-brand {
-    color: #fff;
-}
-.navbar-form {
-  width: auto;
-  padding: 0px;
-  margin-right: -10px;
-  margin-left: 0px;
-  border: 0px none;
-}
-.navbar-brand {
-  height: auto;
-  float: none;    
-  padding: 10px 15px 10px 15px;
-  line-height: 35px;
-  color: #fff;
+  margin-left: 10px;
+  background-color: #ecf9ee;  /*ex light green #ecf9ee; ex light blue #f4f8fa;*/
 }
 
-.title {
-  /*border-bottom: 1px solid #5cb85c;*/
-  background-color: #ecf9ee;  
+.btn-clear {
+  background-color: transparent;
+  border-color: transparent;
 }
-.title-right {
+
+.day-title {
+  border-top: 1px solid #abdef1;
+  border-bottom: 1px solid #abdef1;  
+  background-color: #5bbfde; /*dark blue #5bbfde; light blue #bce8f1; */
+  min-height: 34px; 
+}
+.day-title-right {
   text-align: right;
   white-space: nowrap;
 }
@@ -96,37 +116,79 @@ strong {
 }
 
 .md > h1 {
-  font-size: 14px;  
-  color: #5bbfde; 
+  font-size: 16px;  
+  color: #5cb85c; 
   font-weight: bold;    
+  padding-bottom: 2px;
+  margin-top: 20px;
+  margin-bottom: 10px;
+  min-height: 0px;
+  border-bottom: 1px solid #c2f2c2;  
 }
 .md > h2 {
+  margin-top: 20px;  
   border-bottom: 0px none;  
-  font-size: 14px;
+  font-size: 15px;
   font-weight: bold;    
-  color: #5bbfde;   
+  text-decoration: underline;
+  color: #5cb85c;   
 }
 .md > h3 {
-  font-size: 12px;
-  color: #5bbfde;   
+  font-size: 14px;
+  color: #5cb85c; 
+  font-weight: bold;     
 }
 .md > h4 {
-  font-size: 11px;  
+  font-size: 14px;  
+  color: #5cb85c;   
+  font-weight: normal; 
+}
+.md > h5, .md > h6, .md > h7 {
+  font-size: 13px;   
   color: #5bbfde;    
 }
-.md > h5 {
-  font-size: 10px;   
-  color: #5bbfde;    
+.md > .row {
+  margin-left: -15px;
+  margin-right: 0px;
 }
-.md > ul {
-  margin-left: -20px;
+.md > ul, .md > ol {
+  margin-left: -10px;
+  margin-bottom: 0px;
+}
+ul > .well {
+  margin-left: -15px;
+  margin-bottom: 0px;
+}
+li > .form-control {
+  margin-left: -15px;
+}
+.li-fix {
+  margin-top: -18px;
+  margin-right: -15px;  
 }
 .md {
-  margin: 0px -10px 5px -10px;
-  padding: 10px;
+  margin: 0px -5px 0px -5px;
+  padding: 10px 10px 10px 10px;
   background-color: #fff;
-  border: 1px solid #f9f9f9;
-  border-radius: 4px;
+  border-top: 1px solid #f9f9f9;
+  /*border-radius: 4px;*/
+}
+.md-title {
+  margin-left: -10px;
+  margin-right: -10px;
+  margin-top: 5px;
+  /* light blue #bce8f1 */
+  border-bottom: 1px solid #bce8f1;  
+}
+
+.daily-goal {
+  margin: 5px;
+  padding: 0px;    
+  border-bottom: 1px solid #f4f8fa;
+}
+
+.daily-action {
+  margin-left: -10px;
 }
 
 @media screen and (min-width: 768px) {

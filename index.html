@@ -8,7 +8,7 @@
   <meta name="author" content="">
   <!--<link rel="shortcut icon" href="../../docs-assets/ico/favicon.png">-->
 
-  <title>Wishes</title>
+  <title>Wishful Thinking</title>
   <!-- Bootstrap core CSS -->
   <!--link href="//getbootstrap.com/dist/css/bootstrap.min.css" rel="stylesheet"-->
   <link href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.css" rel="stylesheet">
@@ -34,15 +34,10 @@
         </div>      
 
         <div class="col-xs-8 text-center">
-          <a class="navbar-brand" href="http://getbootstrap.com/examples/offcanvas/#">WishingApp</a>
+            Wishful Thinking
         </div>
 
         <div class="col-xs-2">
-          {{#unless isAddingRecord}}    
-            <button type="button" class="btn btn-success pull-right" {{action 'addingRecord'}}>
-              <span class="glyphicon glyphicon-plus" ></span>
-            </button> 
-          {{/unless}}
         </div>
 
       </div><!-- /.container -->
@@ -57,13 +52,16 @@
     </div><!--/.container-->
   </script>
 
-  <script type="text/x-handlebars" data-template-name="days">
-    {{#if isAddingRecord}}    
-      {{day-record isEditing=true isAddingRecord=true updateAction='save' cancelAction='cancel' deleteAction='delete' record=currentDay}}
-    {{/if}}
-
+  <script type="text/x-handlebars" data-template-name="days"> <!-- list day records -->
     {{#each}}
-      {{day-record isEditing=false updateAction='update' deleteAction='delete' record=this}}
+      {{day-record 
+        updateAction='update'
+        cancelAction='cancel'
+        deleteAction='delete'
+        newGoalAction='saveGoal'
+        updateGoalAction='updateGoal'
+        newActivityAction='saveActivity' 
+        record=this}}
     {{/each}}
   </script>
 
@@ -73,7 +71,7 @@
   <script type="text/x-handlebars" data-template-name="components/day-record">
     {{#if isEditing}} 
 
-      <div class="row title"> <!-- title row-->
+      <div class="row day-title">     <!-- editing; day heading -->
           <div class="col-xs-4">
             <h1>         
               {{record.dayOfWeek}}
@@ -86,22 +84,38 @@
           </div>
       </div> <!--/row-->
 
-      <div class="well well-sm">
-        <div class="row"> <!-- date row -->
-          <div class="col-xs-12">
-            {{input placeholder="Year-month-day" value=record.dateString class="form-control"}}   
-          </div>
-        </div> <!--/row-->
+      <div class="well">    <!-- content editing well --> 
+        <div class="row">       
 
-        <div class="row"> <!-- content row --> 
-          <div class="col-xs-12 col-sm-6">
-            <h2>Wishes</h2>
-            {{textarea placeholder="I will..." rows="10" value=record.a class="form-control"}}
+          <!--
+          <div class="col-xs-12">
+            {{!input placeholder="Year-month-day" value=record.dateString class="form-control"}}   
           </div>
-          <div class="col-xs-12 col-sm-6">
-            <h2>Actions</h2>
-            {{textarea placeholder="I did..." rows="10" value=record.c class="form-control"}}
-          </div>      
+          -->
+
+          <div class="col-xs-12">
+            <h2>Goals and Actions</h2> 
+            <ul>
+            {{#each dailyGoal in record.dailyGoals}}  
+              <li>{{dailyGoal.goal.title}}   
+                <ul>
+                {{#each action in dailyGoal.actions}}
+                  {{#if action.createdAt}}
+                    <li>{{action.body}} <span class="pull-right">{{format-hour action.createdAt}}</span></li>
+                  {{/if}}
+                {{/each}}  
+                </ul>  
+            {{else}}
+              <li>none</li>  
+            {{/each}}
+            </ul>
+          </div>  
+
+          <div class="col-xs-12">
+            <h2>Progress</h2>
+            {{textarea placeholder="Achivements of the day..." rows="10" value=record.c class="form-control"}}
+          </div>
+
           <div class="col-xs-12">
             <h2>Notes</h2>
             {{textarea placeholder="The meaning of the universe is...42" rows="10" value=record.b class="form-control"}}
@@ -110,128 +124,280 @@
 
         <div class="row"> <!-- buttons row -->
           <div class="col-xs-12">
-            {{action-buttons isAddingRecord=isAddingRecord updateAction='update' cancelAction='cancel' deleteAction='delete' }}          
+            {{action-buttons 
+              updateAction='update' 
+              cancelAction='cancel' 
+              deleteAction='delete' 
+              record=record
+            }}          
           </div>
+
         </div> <!--/row-->        
       </div> <!--/well-->
 
     {{else}}
 
-      <div class="row title">
+      <div class="row day-title">       <!--show day header-->
           <div class="col-xs-4">
             <h1>
               {{record.dayOfWeek}}
             </h1>
           </div>
           <div class="col-xs-8">
-            <h1 class="title-right">
+            <h1 class="day-title-right">
               {{record.dateDisplay}}
-              <button type="button" class="btn btn-default btn-xs" {{action 'editing'}}>
-                <span class="glyphicon glyphicon-pencil" ></span>
-              </button> 
+              <button type="button" class="btn btn-default btn-sm btn-clear" {{action 'editing'}}>
+                <span class="glyphicon glyphicon-pencil"></span>
+              </button>               
             </h1>
           </div>
       </div>
+
       <div class="row">
-        <div class="col-xs-12 col-sm-6">
+ 
+        <div class="col-xs-12">   <!--show daily goals-->  
+
+          <div class="row md-title">
+            <div class="col-xs-8"><!-- header-->
+              <h2>Goals</h2>
+            </div>
+
+            <div class="col-xs-4"><!-- add goal button-->
+              {{#if record.isToday}}
+                {{#unless isAddingGoal}} 
+                  <button type="button" class="btn btn-default btn-sm btn-clear pull-right" {{action 'addingGoal'}}>
+                    <span class="glyphicon glyphicon-plus"></span>
+                  </button>
+                {{/unless}}
+              {{/if}}
+            </div>
+          </div>
+
+          <div class="md">
+
+            {{#if isAddingGoal}} 
+            <div class="well">  <!-- adding goal well -->
+              <div class="row">
+                <div class="col-xs-10">
+                  {{input placeholder="New goal..." value=record.newGoal class="form-control"}} 
+                </div>
+                <div class="col-xs-2">    
+                  <button type="button" class="btn btn-success btn-sm pull-right" {{action 'addGoal' record}}>
+                    <span class="glyphicon glyphicon-ok"></span>
+                  </button>
+                </div>
+              </div> 
+            </div>              
+            {{/if}}
+
+            {{#if record.dailyGoals}} <!-- list daily goals -->
+              {{#each dailyGoal in record.dailyGoals}} 
+                <div class="daily-goal">
+                  {{daily-goal 
+                    updateGoalAction='forwardGoal' 
+                    newActivityAction='forwardActivity' 
+                    dailyGoal=dailyGoal}}             
+                </div>
+              {{/each}}
+            {{/if}}
+          </div>
+
+        </div>  
+
+        <div class="col-xs-12 col-sm-6"> <!-- show wishes -->
           {{#if record.a}}
-            <h2>Wishes</h2>
+            <div class="row md-title">
+              <div class="col-xs-12">
+                <h2>Wishes</h2>
+              </div>
+            </div>
             <div class="md">
               {{format-markdown record.a}}
             </div>
           {{/if}}
         </div>
-        <div class="col-xs-12 col-sm-6">
-          {{#if record.c}}        
-            <h2>Actions</h2>
+        <div class="col-xs-12 col-sm-6"> <!-- show progress -->
+          {{#if record.c}}    
+            <div class="row md-title">
+              <div class="col-xs-12">            
+                <h2>Progress</h2>
+              </div>
+            </div>              
             <div class="md">            
               {{format-markdown record.c}}
             </div>
           {{/if}}
         </div>   
 
-        <div class="col-xs-12">
+        <div class="col-xs-12"> <!-- show notes -->
           {{#if record.b}}    
-            <h2>Notes</h2>            
+            <div class="row md-title">
+              <div class="col-xs-12">            
+                <h2>Notes</h2>
+              </div>
+            </div>                 
             <div class="md">
               {{format-markdown record.b}}
             </div>
           {{/if}}
-        </div>                             
+        </div>  
+
+
       </div><!--/row--> 
 
     {{/if}}      
   </script>
+ 
+  <!--    Component: Daily Goal for Day Record   -->
+
+  <script type="text/x-handlebars" data-template-name="components/daily-goal">
+    <div class="row">
+
+      {{#if isEditingGoal}}              <!-- editing goal -->
+
+        <div class="col-xs-12 col-sm-6">
+          <div class="well">            <!-- goal editing well -->
+            <div class="row">
+              <div class="col-xs-10"> 
+                {{input value=dailyGoal.goal.title class="form-control"}}
+                {{input type="checkbox" checked=dailyGoal.goal.isCompleted}} Completed
+              </div>
+
+              <div class="col-xs-2">  <!-- update button -->
+                <button type="button" class="btn btn-success btn-sm pull-right" {{action 'updateGoal' dailyGoal.goal}}>
+                  <span class="glyphicon glyphicon-ok"></span>
+                </button>
+              </div>
+            </div><!--/row-->
+          </div><!--/well-->
+        </div>
+
+      {{else}}                           <!-- showing goal -->
+
+        <div class="col-xs-7 col-sm-4">   <!-- goal title -->   
+          {{dailyGoal.goal.title}} 
+        </div>
+
+        <div class="col-xs-5 col-sm-2">   <!-- "edit goal" and "add action" buttons -->
+          {{#if dailyGoal.day.isToday}} {{!-- only current day can add actions --}}
+            {{#unless isAddingActivity}} 
+              <button type="button" class="btn btn-default btn-sm btn-clear pull-right" {{action 'editingGoal'}}>
+                <span class="glyphicon glyphicon-pencil"></span>
+              </button>  
+            {{/unless}}
+          {{/if}}
+        </div>
+
+      {{/if}}
 
 
+      <div class="col-xs-12 col-sm-6">   <!-- list goal actions -->
+       
+        <ul class="daily-action">
+          {{#each action in dailyGoal.actions}}
 
-  <!--    Component: Day Record    -->
+            {{#if action.createdAt}}
+              <li>
+                {{action.body}} <span class="pull-right">{{format-hour action.createdAt}}</span>
+              </li>
+            {{else}}
+
+              {{#if dailyGoal.day.isToday}} {{!-- only current day can add actions --}}
+                {{#unless dailyGoal.goal.isCompleted}}            
+                  {{#unless isAddingActivity}} 
+
+                    <li>
+                      <button type="button" class="btn btn-default btn-sm" {{action 'addingActivity' action}}>
+                        Next Action: {{format-hour action.actionAt}} 
+                      </button>
+                    </li>
+
+                  {{/unless}}         
+                {{/unless}}
+              {{/if}} 
+
+            {{/if}}         
+
+          {{/each}}             
+        </ul>
+
+
+        {{#if isAddingActivity}} 
+          <div class="well">              <!-- adding action well-->
+            <div class="row">
+
+              <div class="col-xs-10">
+                {{input placeholder="New action..." class="form-control" value=newAction.body}} 
+              </div>
+
+              <div class="col-xs-2">    
+                <button type="button" class="btn btn-success btn-sm pull-right" {{action 'addActivity' newAction}}>
+                  <span class="glyphicon glyphicon-ok"></span>
+                </button>
+              </div>
+
+            </div><!--/row-->
+          </div><!--/well-->
+        {{/if}}  
+     </div>
+
+    </div>    
+  </script>
+
+
+  <!--    Component: Action Buttons for Day Record    -->
 
   <script type="text/x-handlebars" data-template-name="components/action-buttons">
     <div class="h3 pull-right">  
-      {{#if isAddingRecord}}
 
-        <button type="button" class="btn btn-warning" {{action 'cancelEdit'}}>
-          <span class="glyphicon glyphicon-ban-circle" ></span>
-        </button>  &nbsp;
+      {{#if isConfirmingDelete}}   
+          Delete This Entry? 
+          <br />
+          
+          <button type="button" class="btn btn-primary" {{action 'cancelDelete'}}>
+            <span class="glyphicon glyphicon-ban-circle"> Nevermind</span> 
+          </button> 
 
-        <button type="button" class="btn btn-primary" {{action 'updateEdit'}}>
-          <span class="glyphicon glyphicon-ok" ></span>
-        </button> 
+          <button type="button" class="btn btn-danger" {{action 'delete'}}>
+            <span class="glyphicon glyphicon-ok"> Delete</span> 
+          </button> 
+        </div>
 
       {{else}}
 
-        {{#if isConfirmingDelete}}   
+        {{#if isConfirmingCancel}}   
 
-            Delete This Entry? 
+            Abandon Your Changes? 
             <br />
             
-            <button type="button" class="btn btn-primary" {{action 'cancelDelete'}}>
+            <button type="button" class="btn btn-primary" {{action 'cancelCancel'}}>
               <span class="glyphicon glyphicon-ban-circle"> Nevermind</span> 
             </button> 
 
-            <button type="button" class="btn btn-danger" {{action 'delete'}}>
-              <span class="glyphicon glyphicon-ok"> Delete</span> 
+            <button type="button" class="btn btn-danger" {{action 'cancelEdit'}}>
+              <span class="glyphicon glyphicon-ok"> Yes</span> 
             </button> 
-
- 
           </div>
 
         {{else}}
 
-          {{#if isConfirmingCancel}}   
 
-              Abandon Your Changes? 
-              <br />
-              
-              <button type="button" class="btn btn-primary" {{action 'cancelCancel'}}>
-                <span class="glyphicon glyphicon-ban-circle"> Nevermind</span> 
-              </button> 
+          <button type="button" class="btn btn-danger" {{action 'confirmingDelete'}}>
+            <span class="glyphicon glyphicon-remove" ></span> 
+          </button> &nbsp;
 
-              <button type="button" class="btn btn-danger" {{action 'cancelEdit'}}>
-                <span class="glyphicon glyphicon-ok"> Yes</span> 
-              </button> 
-            </div>
+          <button type="button" class="btn btn-warning" {{action 'confirmingCancel'}}>
+            <span class="glyphicon glyphicon-ban-circle" ></span>
+          </button> &nbsp;
+          
+          <button type="button" class="btn btn-success" {{action 'updateEdit'}}>
+            <span class="glyphicon glyphicon-ok" ></span>
+          </button>  
 
-          {{else}}
+        {{/if}} {{!-- if isConfirmingCancel --}}
 
-            <button type="button" class="btn btn-danger" {{action 'confirmingDelete'}}>
-              <span class="glyphicon glyphicon-remove" ></span> 
-            </button> &nbsp;
-            
-            <button type="button" class="btn btn-warning" {{action 'confirmingCancel'}}>
-              <span class="glyphicon glyphicon-ban-circle" ></span>
-            </button> &nbsp;
-            
-            <button type="button" class="btn btn-primary" {{action 'updateEdit'}}>
-              <span class="glyphicon glyphicon-ok" ></span>
-            </button>  
+      {{/if}} {{!-- if isConfirmingDelete --}}
 
-          {{/if}} {{!-- if isConfirmingCancel --}}
-
-        {{/if}} {{!-- if isConfirmingDelete --}}
-
-      {{/if}} {{!-- if isAddingRecord --}}
     </div>
   </script>
 
@@ -246,8 +412,5 @@
   <script src="//www.dropbox.com/static/api/dropbox-datastores-1.0-latest.js"></script>
   <script src="js/ember-dropbox-datastore-adapter.js"></script>
   <script src="js/app.js"></script>
-  <script src="js/routers.js"></script>
-  <script src="js/controllers.js"></script>
-  <script src="js/models.js"></script>
 </body>
 </html>
