@@ -6,9 +6,12 @@ html,
 body {
   overflow-x: hidden; /* Prevent scroll on narrow devices */
   background-color:  #fff; /* light blue #bce8f1;  ex light blue #f4f8fa; */
+  margin:0;     /* This is used to reset any browser-default margins */
+  height:100vh; /* This is needed to overcome a Chrome bug. */
+  width:100vw;  /* As above. */
 }
 body {
-  padding-top: 0px;
+  padding-top: 0px;  
 }
 footer {
   padding: 30px 0;
@@ -17,36 +20,29 @@ footer {
 .container {
   width: 100%
 }
-.container > .navbar-header {
-  text-align: center;
+
+.navbar-nav > li > a.active {
+    color: #fff;
+    background-color: #080808
 }
 
-.navbar {
-  min-height: 44px;
-  background-color: #f4f8fa; /* blue #5bbfde; green #5cb85c */
-  margin-bottom: 0px;
-  font-size: 20px;
-  font-weight: bold;
-  color: #5bbfde;
-  padding-top: 5px;
-  padding-bottom: 0px;
+.navbar-toggle {
+  float: left;
 }
-.navbar-default .navbar-brand {
-    color: #fff;
-}
-.navbar-form {
-  width: auto;
-  padding: 0px;
-  margin-right: -10px;
-  margin-left: 0px;
-  border: 0px none;
-}
-.navbar-brand {
-  height: auto;
-  float: none;    
-  padding: 10px 15px 10px 15px;
-  line-height: 35px;
-  color: #fff;
+
+.navbar-checkin {
+  position: absolute;
+  top: 0px;
+  right: 0px;
+  padding: 9px 10px;
+  margin-top: 8px;
+  margin-right: 15px;
+  margin-bottom: 8px;
+  background-color: transparent;
+  background-image: none;
+  border: 1px solid #999;
+  border-radius: 4px;
+  color: #999;
 }
 
 h1,
@@ -60,26 +56,25 @@ h1,
 }
 h2,
 .h2 {
-  font-size: 16px;
+  font-size: 18px;
+  font-weight: bold;
   margin-top: 10px;
   margin-bottom: 0px;
-  color: #5bbfde; /*dark blue #5bbfde;  light green #c2f2c2 light blue #5bbfde; */
+  color: #458e46; 
+  /*dark blue #5bbfde; dark green: #458e46; green: #5cb85c; light green #c2f2c2 light blue #5bbfde; */
 }
 
 h3,
 .h3 {
-  font-size: 16px;
-}
-/*
-h4,
-.h4 {
   font-size: 14px;
+  color: #5cb85c;  
+  font-weight: normal;
+  margin-top: 0px;
+  margin-right: 5px;
+  margin-left: 5px;  
+  padding-top: 0px; 
 }
-h5,
-.h5 {
-  font-size: 12px;
-}
-*/
+
 blockquote {
   font-size: 14px;
   color: #666;
@@ -88,12 +83,16 @@ blockquote {
   margin-left: -20px;
   margin-right: -20px
 }
-
+.button-cell {
+  padding-left: 0px;
+  padding-right: 10px;  
+}
 .well {
   margin-bottom: 0px;
-  margin-left: 10px;
+  margin-left: 0px;
   background-color: #ecf9ee;  /*ex light green #ecf9ee; ex light blue #f4f8fa;*/
 }
+
 
 .btn-clear {
   background-color: transparent;
@@ -115,23 +114,32 @@ strong {
   background-color: #fff3ad;
 }
 
+.md {
+  margin: 0px -5px 0px -5px;
+  padding: 0px 10px 10px 10px;
+  background-color: #fff;
+  /*border-top: 1px solid #f9f9f9;*/
+  /*border-radius: 4px;*/
+}
+
 .md > h1 {
   font-size: 16px;  
-  color: #5cb85c; 
-  font-weight: bold;    
+  color: #458e46; 
+  font-weight: bold;  
+  text-transform: uppercase;    
   padding-bottom: 2px;
   margin-top: 20px;
   margin-bottom: 10px;
   min-height: 0px;
-  border-bottom: 1px solid #c2f2c2;  
+  /*border-bottom: 1px solid #c2f2c2; */
 }
 .md > h2 {
+  font-size: 15px; 
+  color: #458e46; 
+  font-weight: bold;    
+  text-decoration: none;  
   margin-top: 20px;  
   border-bottom: 0px none;  
-  font-size: 15px;
-  font-weight: bold;    
-  text-decoration: underline;
-  color: #5cb85c;   
 }
 .md > h3 {
   font-size: 14px;
@@ -166,13 +174,7 @@ li > .form-control {
   margin-top: -18px;
   margin-right: -15px;  
 }
-.md {
-  margin: 0px -5px 0px -5px;
-  padding: 10px 10px 10px 10px;
-  background-color: #fff;
-  border-top: 1px solid #f9f9f9;
-  /*border-radius: 4px;*/
-}
+
 .md-title {
   margin-left: -10px;
   margin-right: -10px;
@@ -182,8 +184,8 @@ li > .form-control {
 }
 
 .daily-goal {
-  margin: 5px;
-  padding: 0px;    
+  padding-top: 5px;    
+  padding-left: 10px;
   border-bottom: 1px solid #f4f8fa;
 }
 
@@ -191,16 +193,46 @@ li > .form-control {
   margin-left: -10px;
 }
 
+.daily {
+  margin-bottom: 30px;
+}
+
+.note-form {
+  height: 100vh;
+  background-color: #ecf9ee;  /*ex light green #ecf9ee; ex light blue #f4f8fa;*/  
+}
+.note-header {
+  /*height: 68px;*/
+}
+.note-body {
+  position: absolute;
+  top: 95px;
+  bottom: 55px;
+  left: 35px;
+  right: 35px;
+}
+textarea.form-control {
+  height: 100%;
+  /*width: 100%*/
+}
+.note-footer {
+  position: absolute;  
+  bottom: 10px; 
+}
+
+
 @media screen and (min-width: 768px) {
   .container {
     width: 98%
   }   
+/*
   .navbar-brand {
     float: none;    
   }
   .navbar-header {
     float: none;
   }
+*/
 }
 /*
  * Off Canvas

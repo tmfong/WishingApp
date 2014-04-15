@@ -1,16 +1,47 @@
-$(document).ready(function () {
-  $('[data-toggle=offcanvas]').click(function () {
-    $('.row-offcanvas').toggleClass('active')
-  });
-});
+
+
+/*
+# TODO
+- day.availableFunds should be computed from starterFunds + earning
+
+
+# ACCOUNTING
+- init: ApplicationRoute.setupController
+    - update vault 
+
+- invest in a goal: GoalsRoute.actions.invest
+    - reduce vault availableFunds
+    - inc vault totalInvestments
+    - if current day 
+      - reduce current day availableFunds
+      - inc current day totalInvestments
+      - create dailyGoal record
+
+- check in: ApplicationRoute.actions.dailyCheckIn
+    - load vault availableFunds and totalInvestment
+    - for any missing days, for each invested goal, create dailyGoal
+    - calc availableFunds
+    - update vault availableFunds
+    - copy availableFunds to day
+    - copy totalInvestment to day
+
+- action: DaysRoute.actions.saveActivity
+    - inc vault availableFunds
+    - inc current day availableFunds
+    - inc dailyGoal earnings
+
+- completed a goal: GoalsRoute.actions.update
+    - inc vault availableFunds
+    - reduce vault totalInvestments
+    - if current day
+      - inc current day availableFunds
+      - reduce current day totalInvestments
+      - remove next action
+*/
 
 App = Ember.Application.create({
-  //LOG_ACTIVE_GENERATION: true,
   LOG_MODULE_RESOLVER: true,
-  LOG_TRANSITIONS: true,
-  //LOG_TRANSITIONS_INTERNAL: true, // Ember 1.3.0 [BUGFIX] Make flag LOG_TRANSITIONS_INTERNAL work again
-  LOG_VIEW_LOOKUPS: true,
-  /*
+
   LOG_ACTIVE_GENERATION: true,
 
   // Basic logging, e.g. "Transitioned into 'post'"
@@ -24,7 +55,7 @@ App = Ember.Application.create({
 
   //LOG_VIEW_LOOKUPS: true,
   //LOG_BINDINGS: true,
-  */
+
 });
 
 
@@ -37,27 +68,6 @@ window.onbeforeunload = function() {
 }
 */
 
-var showdown = new Showdown.converter();
-Ember.Handlebars.helper('format-markdown', function(input) {
-  return new Handlebars.SafeString(showdown.makeHtml(input));
-});
-
-Ember.Handlebars.registerBoundHelper('format-hour', function(date) {
-  return date ? moment(date).format('h a') : 'NOW';
-});
-
-
-var onFailed = function (reason, model) {
-  console.log('>> updating ', model, '\n>> failed because', reason);
-  model.rollback();
-}
-
-var currentDay = function() {
-  return moment(new Date()).format('YYYY-MM-DD');
-}
-var forever = function() {
-  return '2099-01-01';
-}
 
 /* ***************************************************
  *
@@ -67,315 +77,230 @@ var forever = function() {
 
 App.Router.map(function() {
   this.resource('days', {path: '/days'});
+  this.resource('goals', {path: '/goals'});  
 });
 App.IndexRoute = Ember.Route.extend({
   redirect: function() {
     this.transitionTo('days');
   }
 });
-App.DaysRoute = Ember.Route.extend({
-  setupController: function(controller, model) {
-    var store = this.get('store');
-    var promise1 = store.findAll('day');
-    var promise2 = store.findAll('goal');
-    var promise3 = store.findAll('action');
+
+
+App.ApplicationRoute = Ember.Route.extend({
+
+  beforeModel: function() {
+    // return clearTable(this.get('store'), 'activity');    
+    // clearTable(this.get('store'), 'dailyGoal');
+    // clearTable(this.get('store'), 'goal');
+    // return clearTable(this.get('store'), 'vault');  
+  },
+  // model: function() {
+  //   return this.get('store').find('day').then(
+  //     function(result) {
+  //       var days = result.get('content');
+  //       // Connect days with their daily goals and notes
+  //       for (var i = 0; i < days.length; i++) {
+  //         if (days[i].get('date') >= '2014-04-10') {
+  //           deleteDay(days[i]);
+  //           // days[i].set('starterFunds', 200);
+  //           // days[i].set('expenses', 0);
+  //           // days[i].set('totalInvestments', 0);
+  //           // days[i].save();      
+  //         }
+  //       }
+  //     }
+  //   );    
+  // },
+
+  afterModel: function() {
     var self = this;
+    var store = self.get('store');
+    var controller = self.controllerFor('application');
 
-    Ember.RSVP.all([promise1, promise2, promise3]).then(function(array) {
-      var days = array[0].get('content');
-      var goals = array[1].get('content');
-      var actions = array[2].get('content');
-      var today;
+    return store.findAll('vault').then(
+      function(result) {
+        var vaults = result.get('content');
+        var lastCheckInDate;
 
-      // // Clean up
-      // for (var k = actions.length - 1; k >= 0; k--) {
-      //   actions[k].deleteRecord();
-      //   actions[k].save();
-      // } // for actions       
-      // for (var i = goals.length - 1; i >= 0; i--) {
-      //   goals[i].deleteRecord();
-      //   goals[i].save();
-      // }
 
-      // Loop through all day records
-      for (var j = 0; j < days.length; j++) {
-        if (days[j].get('isToday')) {
-          today = days[j];
+        // Load preset records into controller, create them if first time
+        if (vaults.length === 0) {
+          // var date = todayDate();          
+          lastCheckInDate = '2014-04-10'; // TEMP
+          // Create new day 
+          createDay(store, lastCheckInDate, GAME_STARTER_FUND, 0, true);
+          // Create new vault
+          var lastDayVault = newVault(store, VAULT_TYPE_DAY, VAULT_LAST_CHECK_IN_DATE, lastCheckInDate);
+          controller.set('lastCheckInDateVault', lastDayVault);  
+
+        } else {
+          for (var i = 0; i < vaults.length; i++) {
+            var type = vaults[i].get('type');
+            var key = vaults[i].get('key');
+            var value = vaults[i].get('value');
+
+            if (type === VAULT_TYPE_DAY && key === VAULT_LAST_CHECK_IN_DATE) {  
+              controller.set('lastCheckInDateVault', vaults[i]);
+              lastCheckInDate = value;
+            }
+          } // for
         }
+      }
+    );
+  },
+  // TEMP: clean up
+  setupController: function(controller, model) {
 
-        createDailyGoals(store, days[j], goals, actions);
+    var self = this;
+    var store = self.get('store');
+
+    var lastCheckInDate = controller.get('lastCheckInDateVault').get('value');
+    return store.find('day', {date: lastCheckInDate}).then(
+      function(result) {
+        var day = result.get('content')[0];
+        if (day) {
+          controller.set('lastCheckInDay', day);
+        }
+      }
+    );
+  },
+
+  actions: {
+    dailyCheckIn: function() {
+      console.log('>> ApplicationRoute dailyCheckIn');
+      dailyCheckIn(this.get('controller')); 
+    },
+  }  
+});
+
+
+App.DaysRoute = Ember.Route.extend({
+  // beforeModel: function() {
+  //   console.log('>> DaysRoute beforeModel');
+  // },  
+  // model: function() {
+  //   console.log('>> DaysRoute model');
+  // },
+  // afterModel: function() {
+  //   console.log('>> DaysRoute afterModel');      
+  // },
+
+  setupController: function(controller, model) {
+    console.log('>> ApplicationRoute setupController');
+
+    var store = this.get('store');
+    var self = this;    
+    var p0 = store.findAll('day');
+    var p1 = store.findAll('activity');
+    var p2 = store.findAll('note');
+    var p3 = store.findAll('dailyGoal');
+
+    return Ember.RSVP.all([p0, p1, p2, p3]).then(function(array) {
+      var days = array[0].get('content');
+      var activities = array[1].get('content');
+      var notes = array[2].get('content');   
+      var dailyGoals = array[3].get('content');      
+
+      // Connect days with their daily goals and notes
+      for (var i = 0; i < days.length; i++) {
+        // Connect notes
+        for (var j = 0; j < notes.length; j++) {
+          if (notes[j].get('day').get('id') === days[i].get('id')) {
+            days[i].get('notes').addObject(notes[j]);
+          }
+        } 
+
+        // Connect daily goals
+        for (var j = 0; j < dailyGoals.length; j++) {
+          if (dailyGoals[j].get('day').get('id') === days[i].get('id')) {
+            days[i].get('dailyGoals').addObject(dailyGoals[j]);
+            // Connect activities
+            connectActivitiesAndSetupTheNextActivity(store, dailyGoals[j], activities);
+          }
+        }
       } // for days  
 
-      // If today's record is not found, create it
-      if (!today) {
-        createToday(store, goals); 
-      }
-
-      // Must set content before setting other properties
-      controller.set('content', days);
-      controller.set('goals', goals); 
-      controller.set('actions', actions);       
+      controller.set('content', days); 
     });
 
   },  
 
   actions: {
     //
-    // day record
+    // Day record
     //
-    cancel: function(day) {
-      console.log('>> DaysRoute cancel');  
-
-      if (day.get('isNew')) {
-        // Delete daily goals
-        deleteDailyGoals(day);
-        // Delete current day record
-        day.deleteRecord();        
-      } else if (day.get('isDirty')) {
-        day.rollback();
-        // restore the daily goals
-        reconnectDailyGoals(this, day);
-      }
-
-      this.controllerFor("application").set('isEditing', false);
-    },   
-
     update: function(day) {
-      console.log('>> update', day);
+      console.log('>> update', day);    
+      this.controllerFor("application").set('isEditing', false);
 
-      // Changed: Changing date doesn't make sense
-      //day.set('date', day.get('dateString')); 
-      day.set('a', day.get('a') || '');
-      day.set('b', day.get('b') || '');
-      day.set('c', day.get('c') || '');      
-
-      var wasNew = day.get('isNew');
-      var newGoal = day.get('newGoal');
       var self = this;
       day.save(); 
-
-      this.controllerFor("application").set('isEditing', false);
     },
 
-    delete: function(day) {
-      console.log('>> DaysRoute delete'); 
-      deleteDay(day);
-    },    
+    //
+    // Action activity
+    //
+    saveActivity: function(activity) {
+      console.log('>> DaysRoute saveActivity', activity);  
+      saveActivity(this, activity);   
+    },
 
     //
-    // Goal
+    // Note
     //
-    saveGoal: function(day) {
-      var title = day.get('newGoal');
-      if (title && title.trim()) {
-        var store = this.get('store'); 
-        createGoal(store, title, day); 
+    newNote: function(day) {
+      creatingNote(this.get('store'), day);
+    },
+    updateNote: function(note) {
+      console.log('>> DaysRoute updateNote', note);
+      // Abandoned new notes?
+      if (note.get('isNew')) {
+        // If blank, delete it
+        if (!note.get('body').trim()) {
+          note.deleteRecord();
+          return;
+        }         
       }      
+      // Update storage
+      note.set('editedAt', now());
+      note.save();  
     },
-
-    updateGoal: function(goal) {
-      var isCompleted = goal.get('isCompleted');
-      if (isCompleted) {
-        goal.set('endDate', currentDay());
-      } else {
-        goal.set('endDate', forever());
-      }
-      goal.save();      
-    },
-
-    //
-    // action activities
-    //
-    saveActivity: function(action) {
-      console.log('>> DaysRoute newAction', action);  
-      var store = this.get('store'); 
-
-      // Save the reference before cleaning it up
-      var dailyGoal = action.get('dailyGoal');
-
-      action.set('dailyGoal', null);
-      action.set('createdAt', moment().format());                
-
-      saveAction(store, dailyGoal, action);   
-    }
   }  
 });
 
-//
-// Day
-//
+App.GoalsRoute = Ember.Route.extend({
+  model: function() {
+    return this.get('store').find('goal');
+  },
 
-var createToday = function(store, goals) {
-  var obj = {
-    date: currentDay(),
-    a: '',
-    b: '',
-    c: ''
-  };
-  console.log('>> new day', obj);
-  var day = store.createRecord('day', obj); 
-  day.save().then(
-    function (answer) {
-      // Add daily goals         
-      createDailyGoals(store, day, goals, []);
+  actions: {
+    adding: function() {
+      var store = this.get('store');
+      creatingGoal(store);
+
+      this.toggleProperty('isNew');      
     },
-    function (reason) {
-      onFailed(reason, model);
-    }        
-  );    
-};
 
-var deleteDay = function(day) {
-  // Delete daily goals
-  deleteDailyGoals(day);
-  // Delete day record
-  day.deleteRecord();
-  day.save();
-};
+    update: function(goal) {
+      if (goal.get('isNew')) {
+        this.controller.set('isNew', false)
+        // If blank, delete it
+        if (!goal.get('title').trim()) {
+          goal.deleteRecord();
+          return;
+        }         
+      }
 
-//
-// Goal
-//
+      var store = this.get('store');      
+      updateGoal(store, goal);
+    },  
 
-var createGoal = function(store, title, day) {
-  var obj = {
-    title: title,
-    body: '',
-    daily: true,
-    startDate: day.get('date'),
-    endDate: forever()
-  };
-  var goal = store.createRecord('goal', obj);
-  goal.save().then(
-    function (answer) {
-      // Create a daily goal
-      var dailyGoal = createDailyGoal(store, day, goal);
-      // Add first action 
-      createFirstAction(store, day, dailyGoal);      
+    invest: function(goal) {
+      investGoal(this, goal);
     },
-    function (reason) {
-      onFailed(reason, goal);
-    }
-  ); 
-};
 
-//
-// Daily goal
-//
-
-var createDailyGoals = function(store, day, goals, actions) {
-  // Loop through all goal records
-  for (var i = 0; i < goals.length; i++) {
-    var startDate = goals[i].get('startDate'), endDate = goals[i].get('endDate');
-    // If the goal range covers today
-    if (startDate <= day.get('date') && day.get('date') <= endDate) {
-      // Create daily goal
-      var dailyGoal = createDailyGoal(store, day, goals[i]);
-
-      // Set actions to their daily goals
-      for (var k = 0; k < actions.length; k++) {
-        if (actions[k].get('goal').get('id') === goals[i].get('id') 
-          && actions[k].get('day').get('id') === day.get('id')) {
-          dailyGoal.get('actions').addObject(actions[k]);
-        }
-      } // for actions 
-
-      var dailyActions = dailyGoal.get('actions').get('content');
-      if (day.get('isToday') && dailyActions) {
-        createFirstAction(store, day, dailyGoal);
-      }     
-    }        
-  } // for goals  
-};
-
-var createDailyGoal = function(store, day, goal) {
-  var obj = {
-    goal: goal,
-    day: day,
-    actions: []
   }
-  var dailyGoal = store.createRecord('dailyGoal', obj);
-  day.get('dailyGoals').addObject(dailyGoal);
-  return dailyGoal;
-};
-
-var reconnectDailyGoals = function(self, day) {
-  self.get('store').findAll('dailyGoal').then(
-    function(result){
-      var dailyGoals = result.get('content');
-      for (var i = 0; i < dailyGoals.length; i++) {
-        if (dailyGoals[i].get('day').get('date') === day.get('date')) {
-          day.get('dailyGoals').addObject(dailyGoals[i]);
-        }
-      }
-    }
-  );
-};
-
-var deleteDailyGoals = function(day) {
-  if (day.get('dailyGoals')) {
-    var dailyGoals = day.get('dailyGoals').get('content');  
-    // NOTE: Count backwards when removing items from an array 
-    for (var i = dailyGoals.length - 1; i >= 0; i--) {
-      // Delete actions    
-      var actions = dailyGoals[i].get('actions').get('content');
-      for (var j = actions.length - 1; j >= 0; j--) {
-        actions[j].deleteRecord();
-        actions[j].save();
-      }
-      // Delete daily goals
-      dailyGoals[i].deleteRecord();
-    }    
-  }
-};
-
-//
-// Action
-//
-
-var createFirstAction = function(store, day, dailyGoal) {
-  // Create first action
-  var obj = {
-    goal: dailyGoal.get('goal'),
-    day: dailyGoal.get('day'),
-    body: '',
-    createdAt: '',
-    actionAt: ''           
-  }
-  var action = store.createRecord('action', obj);
-  dailyGoal.get('actions').addObject(action);
-  return action;  
-};
-
-var createNextAction = function(store, dailyGoal) {
-  var obj = {
-    goal: dailyGoal.get('goal'),
-    day: dailyGoal.get('day'), 
-    body: '',
-    actionAt: moment().add('hours', 6).format(),
-    createdAt: ''  // !!! must be '' or the saveAction() will loop forever   
-  }
-  var action = store.createRecord('action', obj);  
-  dailyGoal.get('actions').addObject(action);
-
-  saveAction(store, dailyGoal, action);   
-};
-
-var saveAction = function(store, dailyGoal, action) {
-  action.save().then(
-    function (answer) {
-      // If it is not a scheduled action, schedule the next one
-      if (action.get('createdAt')) {
-        createNextAction(store, dailyGoal);
-      }
-    },
-    function (reason) {
-      onFailed(reason, action);
-    }        
-  );  
-}
-
-
+});
 
 
 
@@ -385,15 +310,48 @@ var saveAction = function(store, dailyGoal, action) {
  *
  */
 
- App.DayRecordComponent = Ember.Component.extend({
+App.GoalRecordComponent = Ember.Component.extend({
+  init: function() {
+    this._super();
+    this.set('isEditing', this.get('goal').get('isNew'));
+    this.set('isChanging', this.get('isEditing'));    
+  },
+  actions: {
+    editing: function() {
+      this.toggleProperty('isEditing');
+      this.toggleProperty('isChanging');       
+    },    
+    update: function(goal) {
+      this.toggleProperty('isEditing');      
+      this.toggleProperty('isChanging');
+
+      this.sendAction('updateAction', goal); 
+    },   
+
+    investing: function() {
+      this.toggleProperty('isInvesting');             
+      this.toggleProperty('isChanging');       
+    },
+    invest: function(goal) {
+      this.toggleProperty('isInvesting');      
+      this.toggleProperty('isChanging');
+
+      // Make sure we don't use string 
+      var investment = parseInt(goal.get('investment'), 10);
+      goal.set('investment', investment);
+
+      this.sendAction('investAction', goal); 
+    }, 
+  }
+});
+
+App.DayRecordComponent = Ember.Component.extend({
   init: function() {
     this._super();
     this.set('isEditing', this.get('record').get('isNew'));
   },
   actions: {
-    editing: function() {
-      this.toggleProperty('isEditing');
-    }, 
+
     update: function() {
       var r = this.get('record');
       this.sendAction('updateAction', r);
@@ -415,209 +373,499 @@ var saveAction = function(store, dailyGoal, action) {
     },
 
     //
-    // Goal
+    // Action activity
     //
-    addingGoal: function() {
-      this.toggleProperty('isAddingGoal');
+    newActivityAction: function(action) {
+      this.sendAction('newActivityAction', action);        
     },
-    addGoal: function(day) {
-      this.sendAction('newGoalAction', day);
 
-      this.set('newGoal', '');
-      this.toggleProperty('isAddingGoal');
-    },
-    forwardGoal: function(goal) {
+    updateGoalAction: function(goal) {
       this.sendAction('updateGoalAction', goal);
     },
 
     //
-    // Action activity
+    // Note
     //
-    forwardActivity: function(action) {
-      this.sendAction('newActivityAction', action);        
-    }
+    addingNote: function(day) {
+      this.sendAction('newNoteAction', day); 
+
+      this.toggleProperty('isNewNote');
+    },
+    updateNoteAction: function(note) {
+      this.sendAction('updateNoteAction', note);
+
+      if (this.get('isNewNote')) {
+        this.toggleProperty('isNewNote');        
+      }
+    },    
   }
 });
 
 App.DailyGoalComponent = Ember.Component.extend({
   actions: {
-    //
-    // Goal
-    //
-    editingGoal: function() {
-      this.toggleProperty('isEditingGoal');
-    },
-    updateGoal: function(goal) {
-      this.sendAction('updateGoalAction', goal);  
-      this.toggleProperty('isEditingGoal');
-    },
-
-    //
-    // Action
-    //
-    addingActivity: function(action) {
-      // If action is scheduled, save it for editing
-      if (!action) {
-        var dailyGoal = this.get('dailyGoal');
-        action = {
-          goal: dailyGoal.get('goal'),
-          day: dailyGoal.get('day'), 
-          body: '',
-          createdAt: '',
-          actionAt: ''           
-        }
-      } 
+    addingActivity: function(activity) {
+      // ???
+      // // If action is scheduled, save it for editing
+      // if (!action) {
+      //   var dailyGoal = this.get('dailyGoal');
+      //   action = {
+      //     goal: dailyGoal.get('goal'),
+      //     day: dailyGoal.get('day'), 
+      //     body: '',
+      //     createdAt: '',
+      //     actionAt: ''           
+      //   }
+      // } 
       this.set('clockStarts', new Date());
-      this.set('newAction', action);
+      this.set('newActivity', activity);
 
       this.toggleProperty('isAddingActivity');
     }, 
 
-    addActivity: function(newAction) {
+    addActivity: function(newActivity) {
+      this.toggleProperty('isAddingActivity');
+
       var duration = moment().diff(this.get('clockStarts'), 'minutes');
       var clockStarts = this.get('clockStarts');
 
       // Ember Data
-      if (!newAction.get('body').trim()){
+      if (!newActivity.get('body').trim()){
         if (duration < 1)  {
-          newAction.set('body', 'check-in');
+          newActivity.set('body', 'check-in');
         } else {
-          newAction.set('body', moment().from(clockStarts, true));
+          newActivity.set('body', moment().from(clockStarts, true));
         }
       }
-      // Smuggle dailyGoal for later use
-      newAction.set('dailyGoal', this.get('dailyGoal'))           
-      this.sendAction('newActivityAction', newAction); 
-
-      this.toggleProperty('isAddingActivity');
+      // // Smuggle dailyGoal for later use
+      // newActivity.set('dailyGoal', this.get('dailyGoal'))           
+      this.sendAction('newActivityAction', newActivity); 
     },     
   }
 });
 
-App.ActionButtonsComponent = Ember.Component.extend({
+App.DailyNoteComponent = Ember.Component.extend({
+  init: function() {
+    this._super();
+    this.set('isEditing', this.get('note').get('isNew'));
+  },  
   actions: {
-    updateEdit: function() {
-      this.sendAction('updateAction');
+    editing: function() {
+      this.toggleProperty('isEditing');   
+    }, 
+
+    update: function(note) {
+      this.sendAction('updateNoteAction', note);
+      this.toggleProperty('isEditing');       
     },
 
     confirmingCancel: function() {
-      var record = this.get('record');
-      if (record.get('isDirty')) {
-        this.toggleProperty('isConfirmingCancel'); 
-      } else {
-        this.sendAction('cancelAction');
-      }
-    },
-    cancelEdit: function() {      
-      this.sendAction('cancelAction');
-      this.toggleProperty('isConfirmingCancel');       
-    },  
-    cancelCancel: function() {
       this.toggleProperty('isConfirmingCancel'); 
+    },
+    confirmedCancel: function(note) {    
+      if (note.get('isNew')) {
+        // Going to delete this newly created record
+        note.set('body', '');
+        this.sendAction('updateNoteAction', note);
+      } else if (note.get('isDirty')) {
+        note.rollback();
+      }
+      this.toggleProperty('isConfirmingCancel'); 
+      this.toggleProperty('isEditing');            
+    },  
+    nevermind: function() {
+      this.toggleProperty('isConfirmingCancel');       
     },    
-
-    confirmingDelete: function() {
-      this.toggleProperty('isConfirmingDelete'); 
-    },
-    delete: function() {
-      this.sendAction('deleteAction');      
-      this.toggleProperty('isConfirmingDelete');
-    },
-    cancelDelete: function() {
-      this.toggleProperty('isConfirmingDelete'); 
-    },
   }
 });
 
 
-/* ***************************************************
- *
- * Controllers 
- *
+
+///////////////////////////////////////////////////////
+//
+// Helpers
+//
+
+var clearTable = function(store, tableName) {
+  return store.find(tableName).then(
+    function(result) {
+      var array = result.get('content');
+      for (var i = array.length - 1; i >= 0; i--) {
+        array[i].deleteRecord();
+        array[i].save();
+      }
+    }
+  );  
+}
+
+var newVault = function(store, type, key, value) {
+  var obj = {
+    type: type,
+    key: key,
+    value: value,
+    editedAt: now()
+  }
+  var item = store.createRecord('vault', obj);
+  item.save();
+  return item;
+};
+
+var updateVault = function(item, value) {
+  item.set('value', value);
+  item.save(); 
+}
+
+///////////////////////////////////////////////////////
+//
+// Day
+//
+
+/* dailyCheckIn
+ * Referenced: ApplicationRoute.dailyCheckIn
  */
+var dailyCheckIn = function(controller) {
+  console.log('>> dailyCheckIn');  
 
-App.ApplicationController = Ember.Controller.extend({
-  isEditing: false,
+  var lastCheckInDay = controller.get('lastCheckInDay');
+  var lastCheckInDateVault  = controller.get('lastCheckInDateVault');
+
+  if (lastCheckInDateVault.get('value') === todayDate()) return;
+
+  var availableFunds = lastCheckInDay.get('availableFunds');
+  var totalInvestments = lastCheckInDay.get('totalInvestments');
+
+  // Create all the days between the last check-in and today
+  lastCheckInDay = createNextDayFromDay(
+    lastCheckInDay, 
+    controller.get('store'), 
+    lastCheckInDateVault,
+    availableFunds,
+    totalInvestments);
+  controller.set('lastCheckInDay', lastCheckInDay);
+};
+
+// Create day from a previous day
+var createNextDayFromDay = function(day, store, lastCheckInDateVault, availableFunds, totalInvestments) {
+  console.log('>> createNextDayFromDay', day.get('date')); 
+  // Next day's date   
+  var newDate = nextDayDateFromDate(day.get('date'));
+  var isCheckingIn = newDate === todayDate();
+  var newDay = createDay(store, newDate, availableFunds, totalInvestments, isCheckingIn);
+
+  if (newDate >= todayDate()) {
+    updateVault(lastCheckInDateVault, newDate);
+    return newDate;
+
+  } else {
+    // Avoid using day.earnings as it relies on dailyGoals which are being created async
+    availableFunds += totalInvestments * GAME_GOAL_DAILY_PENALTY;
+    return createNextDayFromDay(newDay, store, lastCheckInDateVault, availableFunds, totalInvestments)
+  }
+};
+
+// Referenced: ApplicationRoute.setupController,  ApplicationRoute.dailyCheckIn
+var createDay = function(store, date, availableFunds, totalInvestments, isCheckingIn) {
+  console.log('>> createDay');   
+  var obj = {
+    date: date,
+    starterFunds: availableFunds,
+    expenses: 0,
+    totalInvestments: totalInvestments,
+    checkedIn: isCheckingIn
+  };
+  var day = store.createRecord('day', obj); 
+  day.save().then(
+    function (result) {
+      // Add daily goals, regardless isCheckingIn or not because they effect the daily earnings     
+      store.find('goal').then(
+        function(result) {
+          var goals = result.get('content');
+          createDailyGoals(store, day, goals);          
+        }
+      );                     
+    }      
+  );
+  return day;
+};
+
+var deleteDay = function(day) {
+  // Delete daily goals
+  deleteDailyGoals(day);
+  // Delete day record
+  day.deleteRecord();
+  day.save();
+};
+var deleteDailyGoals = function(day) {
+  // NOTE: Count backwards when removing items from an array   
+  var dailyGoals = day.get('dailyGoals').get('content');  
+  for (var i = dailyGoals.length - 1; i >= 0; i--) {
+    // Delete activities    
+    var activities = dailyGoals[i].get('activities').get('content');
+    for (var j = activities.length - 1; j >= 0; j--) {
+      activities[j].deleteRecord();
+      activities[j].save();
+    }
+    // Delete daily goals
+    dailyGoals[i].deleteRecord();
+    dailyGoals[i].save();
+  }    
+};
+
+///////////////////////////////////////////////////////
+//
+// Goal
+//
+
+// Create a goal but don't save it yet
+var creatingGoal = function(store) {
+  var obj = {
+    title: '',
+    body: '',
+    daily: true,
+    startDate: DATE_FUTURE,
+    endDate: DATE_FUTURE,
+    investment: 0
+  };
+  var goal = store.createRecord('goal', obj);
+};
+
+var updateGoal = function(store, goal) {
+  // Completing the goal
+  if (goal.get('isCompleted')){
+    // NOTE: technique for figuring out what was changed
+    var changes = goal.changedAttributes(); //=> { isCompleted: [oldValue, newValue] }
+    if (changes.get('isCompleted')) {
+      goal.set('endDate', todayDate());
+      // TODO: accounting and stop dailygoal   
+    }
+  } 
+
+  goal.save();  
+};
+
+// Start a goal investment
+// Assume today is checked in
+var investGoal = function(route, goal) {
+  var controller = route.controllerFor('application');
+
+
+  // var fundVault = controller.get('availableFundsVault');
+  // var investmentVault = controller.get('totalInvestmentsVault');
+  // var lastCheckInDate = controller.get('lastCheckInDateVault').get('value');
+  var lastCheckInDay = controller.get('lastCheckInDay');
+
+  var expenses = lastCheckInDay.get('expenses');
+  var totalInvestments = lastCheckInDay.get('totalInvestments');
+  var availableFunds = lastCheckInDay.get('availableFunds');
+  var pendingInvestment = goal.get('investment');
+  if (availableFunds < pendingInvestment) return; // Not enough funds
+
+  lastCheckInDay.set('expenses', expenses + pendingInvestment);
+  lastCheckInDay.set('totalInvestments', totalInvestments + pendingInvestment);
+  lastCheckInDay.save();
+
+  // Create daily goal
+  createDailyGoal(route.get('store'), lastCheckInDay, goal);   
+
+  // Update goal record 
+  goal.set('startDate', lastCheckInDay.get('date'));
+  goal.save();  
+};
+
+///////////////////////////////////////////////////////
+//
+// Daily goal
+//
+
+// Ref: dailyCheckIn > ... > createDay
+var createDailyGoals = function(store, day, goals) {
+  console.log('>> createDailyGoals');     
+  // Loop through all goal records
+  for (var i = 0; i < goals.length; i++) {
+    var goalStartDate = goals[i].get('startDate');
+    var goalEndDate = goals[i].get('endDate');
+    var date = day.get('date');
+
+    // If the goal range covers today
+    if (goalStartDate <= date && date <= goalEndDate) {
+      // Create daily goal
+      createDailyGoal(store, day, goals[i]);
+    }        
+  } 
+};
+
+// Ref: investGoal, dailyCheckIn > ... > createDay > createDailyGoals
+var createDailyGoal = function(store, day, goal) {
+  console.log('>> createDailyGoal');    
+  var obj = {
+    goal: goal,
+    day: day,
+    investment: parseInt(goal.get('investment'), 10),
+  }
+  var dailyGoal = store.createRecord('dailyGoal', obj);
+  dailyGoal.save();
+  day.get('dailyGoals').addObject(dailyGoal);
+
+  // Setup the next action
+  creatingNextActivity(store, dailyGoal, now());
+};
+
+
+//
+// Action activity
+//
+
+var connectActivitiesAndSetupTheNextActivity = function(store, dailyGoal, activities) {
+  // Set actions to their daily goals  
+  var lastActionTime = DATE_NEVER;
+  for (var k = 0; k < activities.length; k++) {
+    if (activities[k].get('dailyGoal').get('id') === dailyGoal.get('id')) {
+      dailyGoal.get('activities').addObject(activities[k]);
+      // Find the last activity
+      if (activities[k].get('createdAt') > lastActionTime) {
+        lastActionTime = activities[k].get('createdAt');
+      }
+    }
+  }  
+
+  // Only invested goals can have actions today
+  var day = dailyGoal.get('day');
+  if (day.get('isToday') && dailyGoal.get('isActive')) {
+    // Setup the next action
+    var actionAt = lastActionTime === DATE_NEVER ? 
+      now() : moment(lastActionTime).add('hours', ACTION_INTERVAL_IN_HOURS).format();    
+    creatingNextActivity(store, dailyGoal, actionAt);
+  }  
+};
+
+// Ref: connectActivitiesAndSetupTheNextActivity, saveActivity
+var creatingNextActivity = function(store, dailyGoal, actionAt) {
+  var obj = {
+    dailyGoal: dailyGoal,
+    body: '',
+    reward: 0,
+    actionAt: actionAt,
+    createdAt: ''    
+  }
+  var activity = store.createRecord('activity', obj);  
+  dailyGoal.get('activities').addObject(activity);
+
+  return activity;   
+};
+
+var saveActivity = function(route, activity) {
+  var store = route.get('store'); 
+  var dailyGoal = activity.get('dailyGoal');
+
+  // Finance
+  //
+  var investment = parseInt(dailyGoal.get('investment'), 10);
+
+  // Calculate previous rewards
+  var previousActions = dailyGoal.get('activities').get('content');
+  var previousRewards = 0;
+  for (var i = 0; i < previousActions.length; i++) {
+    previousRewards += investment * (i === 0 ? GAME_GOAL_1ST_ACTION_REWARD : GAME_GOAL_ACTION_REWARD);  
+  }
+
+  // Reward on current activity
+  var reward = investment * (previousRewards === 0? GAME_GOAL_1ST_ACTION_REWARD : GAME_GOAL_ACTION_REWARD);
+  // If not exceeding daily max, add to available funds
+  if (reward + previousRewards <= investment * GAME_GOAL_MAX_ACTION_REWARD) {
+    // Record the gain
+    activity.set('reward', reward);    
+  } 
+
+  activity.set('createdAt', now());  
+  activity.save().then(
+    function (answer) {
+      var actionAt = moment().add('hours', ACTION_INTERVAL_IN_HOURS).format();
+      creatingNextActivity(store, dailyGoal, actionAt);
+    }        
+  );  
+}
+
+
+//
+// Note
+//
+
+var creatingNote = function(store, day) {
+  var obj = {
+    day: day,
+    tag: '',
+    body: '',
+    editedAt: now()
+  }
+  var note = store.createRecord('note', obj);
+  day.get('notes').addObject(note);
+  return note;
+};
+
+// var createTag = function(store, note, tagString) {
+//   var tag = note.get(tags).get('content')[0];
+//   if (tag) {  
+//   } else {
+//     // The note has no tag
+//     store.find('tag', {tag: tagString}).then(
+//       function(result) {
+//         var tags = result.get('content');
+//         if (tags.length === 0) {
+//           tag = store.createRecord('tag', {tag: tagString});
+//           tag.save().then(
+//             function(result) {
+//               createNoteTag(store, note, tag);
+//             }
+//           );
+//         } else {
+//           tag = tags[0];
+//           createNoteTag(store, note, tag);
+//         }
+//           note.get('tags').addObject(tag);
+//           tag.get('notes').addObject(note);        
+//       }
+//     );    
+//   }
+// };
+// var createNoteTag = function(store, note, tag) {
+//   var obj = {
+//     note: note,
+//     tag: tag
+//   };
+//   var noteTag = store.createRecord('noteTag', obj);
+//   noteTag.save();
+// }
+
+
+
+var todayDate = function() {
+  return moment(new Date()).format('YYYY-MM-DD');
+};
+
+var now = function() {
+  return moment().format();
+};
+
+var nextDayDateFromDate = function(date) {
+  return moment(date).add('days', 1).format('YYYY-MM-DD');
+};
+
+var vaultToInteger = function(vault) {
+  return parseInt(vault.get('value'), 10);
+};
+//
+// Template Format Helpers
+//
+
+var showdown = new Showdown.converter();
+Ember.Handlebars.helper('format-markdown', function(input) {
+  return new Handlebars.SafeString(showdown.makeHtml(input));
 });
 
-App.DaysController = Ember.ArrayController.extend({
-  // needs: 'application',
-  // isEditing: Ember.computed.alias('controllers.application.isEditing'),
-
-  sortProperties: ['date'],
-  sortAscending: false
+Ember.Handlebars.registerBoundHelper('format-hour', function(date) {
+  var duration = moment().diff(date, 'minutes');  
+  return duration > 0 ? moment(date).format('h a') : 'NOW';
 });
 
-/* ***************************************************
- *
- * Models 
- *
- */
 
- App.Day = DS.Model.extend({
-  date: DS.attr(),
-  /*
-  , year: function() {
-        return this.get('date').getFullYear();
-  }.property('date')
-  , month: function() {
-        return this.get('date').getMonth()+1;
-  }.property('date')
-  , day: function() {
-        return this.get('date').getDate();
-  }.property('date')
-  , daysSince1970: function() {
-    return Math.floor(this.get('date').getTime() / (24*60*60*1000));
-  }.property('date')    
-  */
-  // dateString is a proxy for safe editing
-  dateString: function() {
-    return this.get('date');
-  }.property('date'),
-  isToday: function() {
-    return this.get('date') === currentDay();
-  }.property('date'), 
-  dateDisplay: function() {
-    return this.get('dateString') && moment(this.get('dateString')).isValid() ? 
-      moment(this.get('dateString')).format('MMMM D, YYYY') : '';
-  }.property('dateString'),
-  dayOfWeek: function() {
-    return this.get('dateString') && moment(this.get('dateString')).isValid() ? 
-      moment(this.get('dateString')).format('dddd') : '';
-  }.property('dateString'),
-  a: DS.attr(),
-  b: DS.attr(),
-  c: DS.attr(),
-  dailyGoals: DS.hasMany('dailyGoal')
-});
 
-// Save to archive
-App.Goal = DS.Model.extend({
-  title: DS.attr(),
-  body: DS.attr(),
-  daily: DS.attr(),
-  startDate: DS.attr(),
-  endDate: DS.attr(),
-  isCompleted: function() {
-    return this.get('endDate') <= currentDay();
-  }.property('endDate'),  
-});
 
-// Generated from archive
-App.DailyGoal = DS.Model.extend({
-  goal: DS.belongsTo('goal'),
-  day: DS.belongsTo('day'), 
-  actions: DS.hasMany('action')
-});
-
-App.Action = DS.Model.extend({
-  goal: DS.belongsTo('goal'),
-  day: DS.belongsTo('day'), 
-  body: DS.attr(),
-  actionAt: DS.attr(),
-  createdAt: DS.attr()
-});
-
-App.Test = DS.Model.extend({
-  createdAt: DS.attr()
-});
