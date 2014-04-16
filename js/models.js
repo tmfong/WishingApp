@@ -62,7 +62,12 @@ var DATE_FUTURE = '2099-01-01';
     }
     return rewards;
   }.property('dailyGoals.@each.earnings'),
+
   expenses: DS.attr(),  // Funds converted to goal investments
+  hasInvestments: function() {
+    return this.get('expenses') > 0;
+  }.property('expenses'),    
+
   totalInvestments: DS.attr(), 
 
   availableFunds: function() {

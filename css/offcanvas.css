@@ -93,16 +93,29 @@ blockquote {
   background-color: #ecf9ee;  /*ex light green #ecf9ee; ex light blue #f4f8fa;*/
 }
 
+.btn-lg, .btn-group-lg > .btn {
+  font-size: 18px;
+  line-height: 1.5;
+  border-radius: 50%;
+  min-height: 60px;
+  min-width: 60px;
+}
 
 .btn-clear {
   background-color: transparent;
   border-color: transparent;
 }
+.score-cell {
+  padding: 5px 5px 0 0;
+  width: 70px;
+  text-align: center;
+}
 
 .day-title {
-  border-top: 1px solid #abdef1;
-  border-bottom: 1px solid #abdef1;  
-  background-color: #5bbfde; /*dark blue #5bbfde; light blue #bce8f1; */
+  border-top: 1px solid #999;
+  border-bottom: 1px solid #999;  
+  background-color: #aaa; /*dark blue #5bbfde; light blue #bce8f1; */
+  margin-bottom: 5px;
   min-height: 34px; 
 }
 .day-title-right {
@@ -180,7 +193,7 @@ li > .form-control {
   margin-right: -10px;
   margin-top: 5px;
   /* light blue #bce8f1 */
-  border-bottom: 1px solid #bce8f1;  
+  border-bottom: 1px solid #ecf9ee;  
 }
 
 .daily-goal {

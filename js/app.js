@@ -40,18 +40,18 @@
 */
 
 App = Ember.Application.create({
-  LOG_MODULE_RESOLVER: true,
+  // LOG_MODULE_RESOLVER: true,
 
-  LOG_ACTIVE_GENERATION: true,
+  // LOG_ACTIVE_GENERATION: true,
 
   // Basic logging, e.g. "Transitioned into 'post'"
   LOG_TRANSITIONS: true, 
 
-  // Extremely detailed logging, highlighting every internal
-  // step made while transitioning into a route, including
-  // `beforeModel`, `model`, and `afterModel` hooks, and
-  // information about redirects and aborted transitions
-  LOG_TRANSITIONS_INTERNAL: true,
+  // // Extremely detailed logging, highlighting every internal
+  // // step made while transitioning into a route, including
+  // // `beforeModel`, `model`, and `afterModel` hooks, and
+  // // information about redirects and aborted transitions
+  // LOG_TRANSITIONS_INTERNAL: true,
 
   //LOG_VIEW_LOOKUPS: true,
   //LOG_BINDINGS: true,
@@ -125,8 +125,8 @@ App.ApplicationRoute = Ember.Route.extend({
 
         // Load preset records into controller, create them if first time
         if (vaults.length === 0) {
-          // var date = todayDate();          
-          lastCheckInDate = '2014-04-10'; // TEMP
+          lastCheckInDate = todayDate();          
+          // lastCheckInDate = '2014-04-10'; // TEMP
           // Create new day 
           createDay(store, lastCheckInDate, GAME_STARTER_FUND, 0, true);
           // Create new vault
@@ -203,6 +203,7 @@ App.DaysRoute = Ember.Route.extend({
 
       // Connect days with their daily goals and notes
       for (var i = 0; i < days.length; i++) {
+
         // Connect notes
         for (var j = 0; j < notes.length; j++) {
           if (notes[j].get('day').get('id') === days[i].get('id')) {
@@ -350,6 +351,16 @@ App.DayRecordComponent = Ember.Component.extend({
     this._super();
     this.set('isEditing', this.get('record').get('isNew'));
   },
+  earningsStyle: function() {
+    return currencyButtonCssClass(this.get('record').get('earnings'));
+  }.property('earnings'),
+  availableFundsStyle: function() {
+    return currencyButtonCssClass(this.get('record').get('availableFunds'));
+  }.property('availableFunds'),
+  expensesStyle: function() {
+    return currencyButtonCssClass(this.get('record').get('expenses'));
+  }.property('expenses'),
+
   actions: {
 
     update: function() {
@@ -717,6 +728,7 @@ var createDailyGoal = function(store, day, goal) {
 var connectActivitiesAndSetupTheNextActivity = function(store, dailyGoal, activities) {
   // Set actions to their daily goals  
   var lastActionTime = DATE_NEVER;
+  var hasNextActivity = false;
   for (var k = 0; k < activities.length; k++) {
     if (activities[k].get('dailyGoal').get('id') === dailyGoal.get('id')) {
       dailyGoal.get('activities').addObject(activities[k]);
@@ -724,17 +736,22 @@ var connectActivitiesAndSetupTheNextActivity = function(store, dailyGoal, activi
       if (activities[k].get('createdAt') > lastActionTime) {
         lastActionTime = activities[k].get('createdAt');
       }
+      // Scheduled activity is in memory even after navigating to another route
+      if (activities[k].get('isNew')) {
+        hasNextActivity = true;
+      }
     }
   }  
 
-  // Only invested goals can have actions today
-  var day = dailyGoal.get('day');
-  if (day.get('isToday') && dailyGoal.get('isActive')) {
-    // Setup the next action
-    var actionAt = lastActionTime === DATE_NEVER ? 
-      now() : moment(lastActionTime).add('hours', ACTION_INTERVAL_IN_HOURS).format();    
-    creatingNextActivity(store, dailyGoal, actionAt);
-  }  
+  if (!hasNextActivity) {
+    // Only invested goals can have actions today
+    if (dailyGoal.get('day').get('isToday') && dailyGoal.get('isActive')) {
+      // Setup the next action
+      var actionAt = lastActionTime === DATE_NEVER ? 
+        now() : moment(lastActionTime).add('hours', ACTION_INTERVAL_IN_HOURS).format();    
+      creatingNextActivity(store, dailyGoal, actionAt);
+    }      
+  }
 };
 
 // Ref: connectActivitiesAndSetupTheNextActivity, saveActivity
@@ -759,16 +776,18 @@ var saveActivity = function(route, activity) {
   // Finance
   //
   var investment = parseInt(dailyGoal.get('investment'), 10);
+  var previousRewards = 0, reward = 0;
 
   // Calculate previous rewards
-  var previousActions = dailyGoal.get('activities').get('content');
-  var previousRewards = 0;
-  for (var i = 0; i < previousActions.length; i++) {
-    previousRewards += investment * (i === 0 ? GAME_GOAL_1ST_ACTION_REWARD : GAME_GOAL_ACTION_REWARD);  
+  var activities = dailyGoal.get('activities').get('content');
+  for (var i = 0; i < activities.length; i++) {
+    // Skip the current new activity
+    if (activities[i].get('isNew')) continue;
+    previousRewards += activities[i].get('reward');  
   }
-
   // Reward on current activity
   var reward = investment * (previousRewards === 0? GAME_GOAL_1ST_ACTION_REWARD : GAME_GOAL_ACTION_REWARD);
+  
   // If not exceeding daily max, add to available funds
   if (reward + previousRewards <= investment * GAME_GOAL_MAX_ACTION_REWARD) {
     // Record the gain
@@ -863,9 +882,29 @@ Ember.Handlebars.helper('format-markdown', function(input) {
 
 Ember.Handlebars.registerBoundHelper('format-hour', function(date) {
   var duration = moment().diff(date, 'minutes');  
-  return duration > 0 ? moment(date).format('h a') : 'NOW';
+  // Past event  
+  if (duration > 0) {
+    return moment(date).format('h a');
+  // In less than 30 minutes
+  } else if (duration > -30) {
+    return 'Now';
+  // In the future
+  } else {
+    return moment(date).format('h a');    
+  }
 });
 
+var currencyButtonCssClass = function(currency) {
+  var style = '';
+  if (currency > 0) {
+    style = 'btn btn-lg btn-success disabled';
+  } else if (currency === 0) {
+    style = 'btn btn-lg btn-default disabled';
+  } else {
+    style = 'btn btn-lg btn-danger disabled';    
+  }
+  return style;  
+};
 
 
 
