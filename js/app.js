@@ -305,190 +305,6 @@ App.GoalsRoute = Ember.Route.extend({
 
 
 
-/* ***************************************************
- *
- * Components 
- *
- */
-
-App.GoalRecordComponent = Ember.Component.extend({
-  init: function() {
-    this._super();
-    this.set('isEditing', this.get('goal').get('isNew'));
-    this.set('isChanging', this.get('isEditing'));    
-  },
-  actions: {
-    editing: function() {
-      this.toggleProperty('isEditing');
-      this.toggleProperty('isChanging');       
-    },    
-    update: function(goal) {
-      this.toggleProperty('isEditing');      
-      this.toggleProperty('isChanging');
-
-      this.sendAction('updateAction', goal); 
-    },   
-
-    investing: function() {
-      this.toggleProperty('isInvesting');             
-      this.toggleProperty('isChanging');       
-    },
-    invest: function(goal) {
-      this.toggleProperty('isInvesting');      
-      this.toggleProperty('isChanging');
-
-      // Make sure we don't use string 
-      var investment = parseInt(goal.get('investment'), 10);
-      goal.set('investment', investment);
-
-      this.sendAction('investAction', goal); 
-    }, 
-  }
-});
-
-App.DayRecordComponent = Ember.Component.extend({
-  init: function() {
-    this._super();
-    this.set('isEditing', this.get('record').get('isNew'));
-  },
-  earningsStyle: function() {
-    return currencyButtonCssClass(this.get('record').get('earnings'));
-  }.property('earnings'),
-  availableFundsStyle: function() {
-    return currencyButtonCssClass(this.get('record').get('availableFunds'));
-  }.property('availableFunds'),
-  expensesStyle: function() {
-    return currencyButtonCssClass(this.get('record').get('expenses'));
-  }.property('expenses'),
-
-  actions: {
-
-    update: function() {
-      var r = this.get('record');
-      this.sendAction('updateAction', r);
-
-      this.toggleProperty('isEditing'); 
-    },
-    cancel: function() {
-      var r = this.get('record');
-      this.sendAction('cancelAction', r);     
-
-      this.toggleProperty('isEditing');  
-    },   
-    delete: function() { 
-      var r = this.get('record');
-      console.log('>> DayRecordComponent delete', r.get('date'));
-      this.sendAction('deleteAction', r);  
-
-      this.toggleProperty('isEditing');    
-    },
-
-    //
-    // Action activity
-    //
-    newActivityAction: function(action) {
-      this.sendAction('newActivityAction', action);        
-    },
-
-    updateGoalAction: function(goal) {
-      this.sendAction('updateGoalAction', goal);
-    },
-
-    //
-    // Note
-    //
-    addingNote: function(day) {
-      this.sendAction('newNoteAction', day); 
-
-      this.toggleProperty('isNewNote');
-    },
-    updateNoteAction: function(note) {
-      this.sendAction('updateNoteAction', note);
-
-      if (this.get('isNewNote')) {
-        this.toggleProperty('isNewNote');        
-      }
-    },    
-  }
-});
-
-App.DailyGoalComponent = Ember.Component.extend({
-  actions: {
-    addingActivity: function(activity) {
-      // ???
-      // // If action is scheduled, save it for editing
-      // if (!action) {
-      //   var dailyGoal = this.get('dailyGoal');
-      //   action = {
-      //     goal: dailyGoal.get('goal'),
-      //     day: dailyGoal.get('day'), 
-      //     body: '',
-      //     createdAt: '',
-      //     actionAt: ''           
-      //   }
-      // } 
-      this.set('clockStarts', new Date());
-      this.set('newActivity', activity);
-
-      this.toggleProperty('isAddingActivity');
-    }, 
-
-    addActivity: function(newActivity) {
-      this.toggleProperty('isAddingActivity');
-
-      var duration = moment().diff(this.get('clockStarts'), 'minutes');
-      var clockStarts = this.get('clockStarts');
-
-      // Ember Data
-      if (!newActivity.get('body').trim()){
-        if (duration < 1)  {
-          newActivity.set('body', 'check-in');
-        } else {
-          newActivity.set('body', moment().from(clockStarts, true));
-        }
-      }
-      // // Smuggle dailyGoal for later use
-      // newActivity.set('dailyGoal', this.get('dailyGoal'))           
-      this.sendAction('newActivityAction', newActivity); 
-    },     
-  }
-});
-
-App.DailyNoteComponent = Ember.Component.extend({
-  init: function() {
-    this._super();
-    this.set('isEditing', this.get('note').get('isNew'));
-  },  
-  actions: {
-    editing: function() {
-      this.toggleProperty('isEditing');   
-    }, 
-
-    update: function(note) {
-      this.sendAction('updateNoteAction', note);
-      this.toggleProperty('isEditing');       
-    },
-
-    confirmingCancel: function() {
-      this.toggleProperty('isConfirmingCancel'); 
-    },
-    confirmedCancel: function(note) {    
-      if (note.get('isNew')) {
-        // Going to delete this newly created record
-        note.set('body', '');
-        this.sendAction('updateNoteAction', note);
-      } else if (note.get('isDirty')) {
-        note.rollback();
-      }
-      this.toggleProperty('isConfirmingCancel'); 
-      this.toggleProperty('isEditing');            
-    },  
-    nevermind: function() {
-      this.toggleProperty('isConfirmingCancel');       
-    },    
-  }
-});
-
 
 
 ///////////////////////////////////////////////////////
@@ -881,15 +697,17 @@ Ember.Handlebars.helper('format-markdown', function(input) {
 });
 
 Ember.Handlebars.registerBoundHelper('format-hour', function(date) {
-  var duration = moment().diff(date, 'minutes');  
-  // Past event  
-  if (duration > 0) {
-    return moment(date).format('h a');
-  // In less than 30 minutes
-  } else if (duration > -30) {
-    return 'Now';
-  // In the future
+  return moment(date).format('h a');    
+});
+
+Ember.Handlebars.registerBoundHelper('format-hour-next', function(date) {
+  var duration = moment().diff(date, 'minutes');   
+  if (duration > -30) {
+    // Orginal scheduled time has been passed     
+    return 'NOW';
+
   } else {
+    // In the future    
     return moment(date).format('h a');    
   }
 });

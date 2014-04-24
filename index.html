@@ -76,11 +76,7 @@
       </div><!--/row-->          
     </div><!--/.container-->
   </script>
-
-  <script type="text/x-handlebars" data-template-name="days"> <!-- list day records -->
-    {{#each}}
-        <div class="daily">
-          {{day-record 
+<!-- 
             updateAction='update'
             cancelAction='cancel'
             deleteAction='delete'
@@ -89,7 +85,11 @@
             newActivityAction='saveActivity'
             newNoteAction='newNote'
             updateNoteAction='updateNote'
-            record=this}}
+-->
+  <script type="text/x-handlebars" data-template-name="days"> <!-- list day records -->
+    {{#each}}
+        <div class="daily">
+          {{view App.DayView}}
         </div>
     {{/each}}
   </script>
@@ -110,19 +110,15 @@
     </div>
   
     <!-- goal list -->        
-    {{#each}}
-      <div class="row daily-goal">      
-        {{goal-record 
-          updateAction='update'
-          investAction='invest'
-          goal=this}}
-      </div>
+    {{#each}}     
+      {{view App.GoalView}}
     {{/each}}
   </script>
 
   <!--    Component: Goal Record    -->
 
-  <script type="text/x-handlebars" data-template-name="components/goal-record">
+  <script type="text/x-handlebars" data-template-name="goal-record">
+  <div class="row daily-goal">   
     {{#if isChanging}}  
 
       {{#if isEditing}} 
@@ -131,10 +127,10 @@
             <div class="row">
               <div class="col-xs-10">
                 {{input value=goal.title class="form-control"}}
-                {{input type="checkbox" checked=goal.isCompleted}} Completed
+                {{input type="checkbox" checked=isCompleted}} Completed
               </div>
               <div class="col-xs-2">    
-                <button type="button" class="btn btn-success btn-sm pull-right" {{action 'update' goal}}>
+                <button type="button" class="btn btn-success btn-sm pull-right" {{action 'update'}}>
                   <span class="glyphicon glyphicon-ok"></span>
                 </button>
               </div>
@@ -151,10 +147,10 @@
                 {{goal.title}}
               </div>
               <div class="col-xs-4">
-                {{input placeholder="100" value=goal.investment class="form-control"}}
+                {{input placeholder="100" value=investment class="form-control"}}
               </div>              
               <div class="col-xs-2">    
-                <button type="button" class="btn btn-success btn-sm pull-right" {{action 'invest' goal}}>
+                <button type="button" class="btn btn-success btn-sm pull-right" {{action 'invest'}}>
                   <span class="glyphicon glyphicon-ok"></span>
                 </button>
               </div>
@@ -174,13 +170,13 @@
       <!-- showing -->
 
       <div class="col-xs-7">
-        {{#if goal.isCompleted}}&#x2713;{{/if}}      
-        {{goal.title}} 
+        {{#if isCompleted}}&#x2713;{{/if}}      
+        {{title}} 
       </div>
 
       <div class="col-xs-2 text-right">  
-        {{#if goal.isInvested}}    
-          ${{goal.investment}}
+        {{#if isInvested}}    
+          ${{investment}}
         {{/if}}
       </div>
 
@@ -197,92 +193,81 @@
       </div>
 
     {{/if}}
+  </div>    
   </script>
 
-  <!--    Component: Day Record    -->
+  <script type="text/x-handlebars" data-template-name="components/score-cell">
+    <button type="button" {{bind-attr class=style}}>{{value}}</button>
+    <small class="text-muted">{{caption}}</small>
+  </script>
 
-  <script type="text/x-handlebars" data-template-name="components/day-record">
+  <!--    View: Day Record    -->
 
+  <script type="text/x-handlebars" data-template-name="day-record">
     <div class="row day-title">       <!--show day header-->
       <div class="col-xs-4">
         <h1>
-          {{record.dayOfWeek}} 
+          {{dayOfWeek}} 
         </h1>
       </div>
       <div class="col-xs-8">
         <h1 class="day-title-right">
-          {{record.dateDisplay}}             
+          {{dateDisplay}}             
         </h1>
       </div>
     </div><!--row-->
 
     <!-- show daily goals -->
-    {{#if record.dailyGoals}}    
+    <div>
+      {{!id}}   
+    </div>
 
-      <div>
-        {{!record.id}}   
-      </div>
-
-      <!-- header -->
-      <div class="row md-title"> 
-        <div class="col-xs-3">
+    <!-- header -->
+    <div class="row md-title"> 
+      <div class="col-xs-3">
+        {{#if dailyGoals}}         
           <h2 style="margin-top:65px">Goals</h2>
-        </div>
-        <div class="col-xs-9">
-          <div class="row pull-right"  style="margin-right: -15px">
-            <div class="col-xs-4 score-cell">
-              {{#if record.hasInvestments}}
-                <button type="button" {{bind-attr class="expensesStyle"}}>{{record.expenses}}</button>
-                <small class="text-muted">investment</small>
-              {{/if}}
-            </div>          
-            <div class="col-xs-4 score-cell">
-              <button type="button" {{bind-attr class="earningsStyle"}}>{{record.earnings}}</button>
-              <small class="text-muted">earnings</small>
-            </div>
-            <div class="col-xs-4 score-cell">          
-              <button type="button" {{bind-attr class="availableFundsStyle"}}>{{record.availableFunds}}</button>
-              <small class="text-muted">balance</small>            
-            </div>
-          </div><!--row-->
-        </div>
-
-      </div><!--/row-->
-      <!-- goals -->
-      <div class="md">
-        {{#each dailyGoal in record.dailyGoals}} 
-          <div class="daily-goal">
-            {{daily-goal 
-              updateGoalAction='updateGoalAction' 
-              newActivityAction='newActivityAction' 
-              dailyGoal=dailyGoal}}             
+        {{/if}}          
+      </div>
+      <div class="col-xs-9">
+        <div class="row pull-right"  style="margin-right: -15px">
+          <div class="col-xs-4 score-cell">
+            {{#if hasInvestments}}
+              {{score-cell value=expenses caption='investments'}}                
+            {{/if}}
+          </div>          
+          <div class="col-xs-4 score-cell">
+            {{score-cell value=earnings caption='earnings'}}
           </div>
-        {{/each}}
-      </div> <!--/md-->
-    {{else}}
-          <div class="row pull-right" style="margin-right:-5px">
-            <div class="col-xs-6 score-cell">
-              <button type="button" {{bind-attr class="earningsStyle"}}>{{record.earnings}}</button>
-              <small class="text-muted">earnings</small>
-            </div>
-            <div class="col-xs-6 score-cell">          
-              <button type="button" {{bind-attr class="availableFundsStyle"}}>{{record.availableFunds}}</button>
-              <small class="text-muted">balance</small>            
-            </div>
-          </div><!--row-->    
-    {{/if}}
+          <div class="col-xs-4 score-cell">    
+            {{score-cell value=availableFunds caption='balance'}}            
+          </div>
+        </div><!--row-->
+      </div>
+    </div><!--/row-->
 
+    <!-- goals -->
+    <div class="md">
+      {{#each dailyGoal in dailyGoals}} 
+        <div class="daily-goal">
+          {{daily-goal 
+            updateGoalAction='updateGoalAction' 
+            newActivityAction='newActivityAction' 
+            dailyGoal=dailyGoal}}             
+        </div>
+      {{/each}}
+    </div> <!--/md-->   
 
     <!-- show daily notes -->
     <div class="row"> 
       <div class="col-xs-12"><!-- header-->
         {{#unless isNewNote}} 
-          <button type="button" class="btn btn-default btn-sm pull-right" {{action 'addingNote' record}}>
+          <button type="button" class="btn btn-default btn-sm pull-right" {{action 'addingNote'}}>
             Add Note
           </button>
         {{/unless}}
       </div>
-      {{#each note in record.notes}}
+      {{#each note in notes}}
         {{daily-note 
           updateNoteAction='updateNoteAction' 
           note=note}}
@@ -319,7 +304,7 @@
 
                     <li>
                       <button type="button" class="btn btn-success btn-sm" {{action 'addingActivity' activity}}>
-                        Next Action: {{format-hour activity.actionAt}} 
+                        Next Action: {{format-hour-next activity.actionAt}} 
                       </button>
                     </li>
 
